@@ -14,7 +14,270 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_executions: {
+        Row: {
+          agent_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          input_data: Json
+          output_data: Json | null
+          scan_id: string
+          status: Database["public"]["Enums"]["scan_status"] | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          input_data: Json
+          output_data?: Json | null
+          scan_id: string
+          status?: Database["public"]["Enums"]["scan_status"] | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          input_data?: Json
+          output_data?: Json | null
+          scan_id?: string
+          status?: Database["public"]["Enums"]["scan_status"] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_executions_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agents: {
+        Row: {
+          agent_type: Database["public"]["Enums"]["agent_type"]
+          config: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          prompt_template: string
+          updated_at: string
+        }
+        Insert: {
+          agent_type: Database["public"]["Enums"]["agent_type"]
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          prompt_template: string
+          updated_at?: string
+        }
+        Update: {
+          agent_type?: Database["public"]["Enums"]["agent_type"]
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          prompt_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          request_count: number | null
+          response_status: number | null
+          service_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          request_count?: number | null
+          response_status?: number | null
+          service_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          request_count?: number | null
+          response_status?: number | null
+          service_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          api_quota: number | null
+          created_at: string
+          id: string
+          role: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          api_quota?: number | null
+          created_at?: string
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          api_quota?: number | null
+          created_at?: string
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          requests_count: number | null
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          requests_count?: number | null
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          requests_count?: number | null
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      scans: {
+        Row: {
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          completed_at: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          results: Json | null
+          status: Database["public"]["Enums"]["scan_status"] | null
+          target: string
+          threat_level: Database["public"]["Enums"]["threat_level"] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_type: Database["public"]["Enums"]["asset_type"]
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          results?: Json | null
+          status?: Database["public"]["Enums"]["scan_status"] | null
+          target: string
+          threat_level?: Database["public"]["Enums"]["threat_level"] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_type?: Database["public"]["Enums"]["asset_type"]
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          results?: Json | null
+          status?: Database["public"]["Enums"]["scan_status"] | null
+          target?: string
+          threat_level?: Database["public"]["Enums"]["threat_level"] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      threat_intelligence: {
+        Row: {
+          description: string | null
+          first_seen: string
+          id: string
+          ioc_type: string
+          ioc_value: string
+          is_active: boolean | null
+          last_seen: string
+          metadata: Json | null
+          source: string
+          tags: string[] | null
+          threat_level: Database["public"]["Enums"]["threat_level"]
+        }
+        Insert: {
+          description?: string | null
+          first_seen?: string
+          id?: string
+          ioc_type: string
+          ioc_value: string
+          is_active?: boolean | null
+          last_seen?: string
+          metadata?: Json | null
+          source: string
+          tags?: string[] | null
+          threat_level: Database["public"]["Enums"]["threat_level"]
+        }
+        Update: {
+          description?: string | null
+          first_seen?: string
+          id?: string
+          ioc_type?: string
+          ioc_value?: string
+          is_active?: boolean | null
+          last_seen?: string
+          metadata?: Json | null
+          source?: string
+          tags?: string[] | null
+          threat_level?: Database["public"]["Enums"]["threat_level"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +286,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      agent_type:
+        | "reconnaissance"
+        | "vulnerability"
+        | "threat_intelligence"
+        | "network_analysis"
+      asset_type: "domain" | "ip" | "url" | "hash" | "email"
+      scan_status: "pending" | "running" | "completed" | "failed"
+      threat_level: "low" | "medium" | "high" | "critical"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +420,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      agent_type: [
+        "reconnaissance",
+        "vulnerability",
+        "threat_intelligence",
+        "network_analysis",
+      ],
+      asset_type: ["domain", "ip", "url", "hash", "email"],
+      scan_status: ["pending", "running", "completed", "failed"],
+      threat_level: ["low", "medium", "high", "critical"],
+    },
   },
 } as const
