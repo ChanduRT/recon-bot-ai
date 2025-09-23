@@ -1,0 +1,349 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { 
+  ArrowLeft,
+  Target,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Brain,
+  Activity,
+  Shield,
+  FileText,
+  Download
+} from "lucide-react";
+
+interface ScanDetails {
+  id: string;
+  target: string;
+  asset_type: string;
+  status: string;
+  threat_level: string;
+  created_at: string;
+  completed_at: string;
+  results: any;
+  metadata: any;
+}
+
+interface AgentExecution {
+  id: string;
+  agent_id: string;
+  status: string;
+  input_data: any;
+  output_data: any;
+  execution_time_ms: number;
+  created_at: string;
+  completed_at: string;
+  error_message?: string;
+}
+
+const ScanDetails = () => {
+  const { scanId } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [scan, setScan] = useState<ScanDetails | null>(null);
+  const [executions, setExecutions] = useState<AgentExecution[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (scanId) {
+      fetchScanDetails();
+      fetchAgentExecutions();
+      fetchAgents();
+    }
+  }, [scanId]);
+
+  const fetchScanDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scans')
+        .select('*')
+        .eq('id', scanId)
+        .single();
+
+      if (error) throw error;
+      setScan(data);
+    } catch (error) {
+      console.error('Error fetching scan details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load scan details",
+        variant: "destructive",
+      });
+      navigate('/history');
+    }
+  };
+
+  const fetchAgentExecutions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_executions')
+        .select('*')
+        .eq('scan_id', scanId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExecutions(data || []);
+    } catch (error) {
+      console.error('Error fetching agent executions:', error);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_agents')
+        .select('*');
+
+      if (error) throw error;
+      setAgents(data || []);
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'failed': return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'running': return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
+      default: return <Clock className="w-4 h-4 text-yellow-500" />;
+    }
+  };
+
+  const getThreatBadgeColor = (level: string) => {
+    switch (level) {
+      case 'critical': return 'bg-red-500 hover:bg-red-600';
+      case 'high': return 'bg-orange-500 hover:bg-orange-600';
+      case 'medium': return 'bg-yellow-500 hover:bg-yellow-600';
+      default: return 'bg-green-500 hover:bg-green-600';
+    }
+  };
+
+  const getAgentName = (agentId: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    return agent?.name || 'Unknown Agent';
+  };
+
+  const exportResults = () => {
+    if (scan?.results) {
+      const dataStr = JSON.stringify(scan.results, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `scan-results-${scan.target}-${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+    }
+  };
+
+  if (loading || !scan) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Clock className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 max-w-6xl">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/history')}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to History
+            </Button>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Target className="w-8 h-8 text-primary" />
+                Scan Details
+              </h1>
+              <p className="text-muted-foreground">
+                Detailed analysis results for {scan.target}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button onClick={exportResults} variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export Results
+            </Button>
+          </div>
+        </div>
+
+        {/* Scan Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(scan.status)}
+                {scan.target}
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="capitalize">
+                  {scan.asset_type}
+                </Badge>
+                <Badge className={`text-white ${getThreatBadgeColor(scan.threat_level)}`}>
+                  {scan.threat_level} Risk
+                </Badge>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm font-medium">Status</p>
+                <p className="text-lg capitalize">{scan.status}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Started</p>
+                <p className="text-lg">{new Date(scan.created_at).toLocaleString()}</p>
+              </div>
+              {scan.completed_at && (
+                <div>
+                  <p className="text-sm font-medium">Completed</p>
+                  <p className="text-lg">{new Date(scan.completed_at).toLocaleString()}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Results */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="agents">AI Analysis</TabsTrigger>
+            <TabsTrigger value="raw">Raw Data</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Security Assessment
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {scan.results && typeof scan.results === 'object' ? (
+                  <div className="space-y-4">
+                    {Object.entries(scan.results).map(([key, value]) => (
+                      <div key={key} className="border-l-4 border-primary pl-4">
+                        <h4 className="font-medium capitalize">{key.replace(/_/g, ' ')}</h4>
+                        <pre className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No detailed results available</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="agents" className="space-y-4">
+            <div className="space-y-4">
+              {executions.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No AI Analysis Available</h3>
+                    <p className="text-muted-foreground">
+                      This scan hasn't been analyzed by AI agents yet.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                executions.map((execution) => (
+                  <Card key={execution.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Brain className="w-5 h-5" />
+                          {getAgentName(execution.agent_id)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(execution.status)}
+                          <Badge variant="outline" className="capitalize">
+                            {execution.status}
+                          </Badge>
+                          {execution.execution_time_ms && (
+                            <Badge variant="secondary">
+                              {execution.execution_time_ms}ms
+                            </Badge>
+                          )}
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {execution.output_data && (
+                        <div>
+                          <h4 className="font-medium mb-2">Analysis Results</h4>
+                          <pre className="text-sm bg-muted p-4 rounded whitespace-pre-wrap">
+                            {JSON.stringify(execution.output_data, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      {execution.error_message && (
+                        <div>
+                          <h4 className="font-medium mb-2 text-red-500">Error</h4>
+                          <p className="text-sm text-red-600 bg-red-50 p-3 rounded">
+                            {execution.error_message}
+                          </p>
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        Executed: {new Date(execution.created_at).toLocaleString()}
+                        {execution.completed_at && (
+                          <span> - Completed: {new Date(execution.completed_at).toLocaleString()}</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="raw" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Raw Scan Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-sm bg-muted p-4 rounded overflow-auto max-h-96">
+                  {JSON.stringify(scan, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default ScanDetails;

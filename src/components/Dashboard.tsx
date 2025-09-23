@@ -37,6 +37,44 @@ export function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Setup real-time subscriptions for live dashboard updates
+    const scansChannel = supabase
+      .channel('dashboard-scans')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scans'
+        },
+        () => {
+          // Refetch dashboard data when scans change
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    const executionsChannel = supabase
+      .channel('dashboard-executions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agent_executions'
+        },
+        () => {
+          // Refetch dashboard data when executions change
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(scansChannel);
+      supabase.removeChannel(executionsChannel);
+    };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -272,7 +310,7 @@ export function Dashboard() {
                 variant="outline" 
                 size="sm" 
                 className="w-full justify-start gap-2"
-                onClick={() => navigate("/threats")}
+                onClick={() => navigate("/threat-intel")}
               >
                 <AlertTriangle className="w-4 h-4" />
                 View Threat Intelligence
@@ -290,10 +328,10 @@ export function Dashboard() {
                 variant="outline" 
                 size="sm" 
                 className="w-full justify-start gap-2"
-                onClick={() => navigate("/network-scan")}
+                onClick={() => navigate("/network-tools")}
               >
-                <Shield className="w-4 w-4" />
-                Network Scanner
+                <Shield className="w-4 h-4" />
+                Network Tools
               </Button>
             </div>
           </CardContent>

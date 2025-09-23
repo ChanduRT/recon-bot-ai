@@ -43,6 +43,36 @@ const ThreatIntel = () => {
 
   useEffect(() => {
     fetchThreats();
+    
+    // Setup real-time subscription for threat intelligence updates
+    const channel = supabase
+      .channel('threat-intel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'threat_intelligence'
+        },
+        (payload) => {
+          console.log('Real-time threat intelligence update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setThreats(prev => [payload.new as ThreatIntelligence, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setThreats(prev => 
+              prev.map(threat => 
+                threat.id === payload.new.id ? payload.new as ThreatIntelligence : threat
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {

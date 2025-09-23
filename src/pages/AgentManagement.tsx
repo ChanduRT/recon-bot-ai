@@ -49,6 +49,60 @@ const AgentManagement = () => {
   useEffect(() => {
     fetchAgents();
     fetchExecutions();
+
+    // Setup real-time subscriptions
+    const agentsChannel = supabase
+      .channel('agent-management-agents')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ai_agents'
+        },
+        (payload) => {
+          console.log('Real-time agent update:', payload);
+          
+          if (payload.eventType === 'UPDATE') {
+            setAgents(prev => 
+              prev.map(agent => 
+                agent.id === payload.new.id ? payload.new as AIAgent : agent
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    const executionsChannel = supabase
+      .channel('agent-management-executions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agent_executions'
+        },
+        (payload) => {
+          console.log('Real-time execution update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setExecutions(prev => [payload.new as AgentExecution, ...prev.slice(0, 99)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setExecutions(prev => 
+              prev.map(exec => 
+                exec.id === payload.new.id ? payload.new as AgentExecution : exec
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(agentsChannel);
+      supabase.removeChannel(executionsChannel);
+    };
   }, []);
 
   const fetchAgents = async () => {

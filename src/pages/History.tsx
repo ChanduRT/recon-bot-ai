@@ -43,6 +43,36 @@ const History = () => {
 
   useEffect(() => {
     fetchScans();
+    
+    // Setup real-time subscription for scans
+    const channel = supabase
+      .channel('scan-history')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scans'
+        },
+        (payload) => {
+          console.log('Real-time scan update:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setScans(prev => [payload.new as Scan, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setScans(prev => 
+              prev.map(scan => 
+                scan.id === payload.new.id ? payload.new as Scan : scan
+              )
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
