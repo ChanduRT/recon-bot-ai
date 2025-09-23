@@ -8,7 +8,9 @@ import {
   Brain,
   BarChart3,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  Terminal,
+  History
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -27,8 +29,8 @@ import {
 const mainNavItems = [
   { title: "Dashboard", url: "/", icon: Activity },
   { title: "New Scan", url: "/scan", icon: Search },
-  { title: "Scan History", url: "/history", icon: Database },
-  { title: "Threat Intelligence", url: "/threats", icon: AlertTriangle },
+  { title: "Scan History", url: "/history", icon: History },
+  { title: "Threat Intelligence", url: "/threat-intel", icon: AlertTriangle },
 ];
 
 const agentItems = [
@@ -37,7 +39,7 @@ const agentItems = [
 ];
 
 const toolsItems = [
-  { title: "Network Scanner", url: "/network-scan", icon: Target },
+  { title: "Network Tools", url: "/network-tools", icon: Terminal },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
