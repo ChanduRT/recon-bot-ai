@@ -14,6 +14,7 @@ import Tools from "./pages/Tools";
 import ScanDetails from "./pages/ScanDetails";
 import Settings from "./pages/Settings";
 import AgentAnalytics from "./pages/AgentAnalytics";
+import APTPlanning from "./pages/APTPlanning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/agent-analytics" element={<AgentAnalytics />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/network-tools" element={<NetworkTools />} />
+          <Route path="/apt-planning" element={<APTPlanning />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

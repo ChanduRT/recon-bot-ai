@@ -137,6 +137,153 @@ export type Database = {
         }
         Relationships: []
       }
+      apt_campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          objectives: string[] | null
+          scope_definition: string | null
+          start_date: string
+          status: string
+          target_organization: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          objectives?: string[] | null
+          scope_definition?: string | null
+          start_date?: string
+          status?: string
+          target_organization?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          objectives?: string[] | null
+          scope_definition?: string | null
+          start_date?: string
+          status?: string
+          target_organization?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attack_paths: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          evidence: Json | null
+          execution_order: number | null
+          expected_outcome: string | null
+          id: string
+          mitre_tactic: string | null
+          mitre_technique: string | null
+          phase: string
+          prerequisites: string[] | null
+          risk_level: string | null
+          status: string | null
+          technique_name: string | null
+          tools_required: string[] | null
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: Json | null
+          execution_order?: number | null
+          expected_outcome?: string | null
+          id?: string
+          mitre_tactic?: string | null
+          mitre_technique?: string | null
+          phase: string
+          prerequisites?: string[] | null
+          risk_level?: string | null
+          status?: string | null
+          technique_name?: string | null
+          tools_required?: string[] | null
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence?: Json | null
+          execution_order?: number | null
+          expected_outcome?: string | null
+          id?: string
+          mitre_tactic?: string | null
+          mitre_technique?: string | null
+          phase?: string
+          prerequisites?: string[] | null
+          risk_level?: string | null
+          status?: string | null
+          technique_name?: string | null
+          tools_required?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mitre_mappings: {
+        Row: {
+          automated: boolean | null
+          confidence_score: number | null
+          created_at: string
+          id: string
+          mitre_tactic: string
+          mitre_technique: string
+          reasoning: string | null
+          scan_id: string
+          technique_name: string
+          user_id: string
+          vulnerability_cve: string | null
+        }
+        Insert: {
+          automated?: boolean | null
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          mitre_tactic: string
+          mitre_technique: string
+          reasoning?: string | null
+          scan_id: string
+          technique_name: string
+          user_id: string
+          vulnerability_cve?: string | null
+        }
+        Update: {
+          automated?: boolean | null
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          mitre_tactic?: string
+          mitre_technique?: string
+          reasoning?: string | null
+          scan_id?: string
+          technique_name?: string
+          user_id?: string
+          vulnerability_cve?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           api_quota: number | null
@@ -191,6 +338,42 @@ export type Database = {
           requests_count?: number | null
           user_id?: string
           window_start?: string
+        }
+        Relationships: []
+      }
+      report_templates: {
+        Row: {
+          created_at: string
+          format_settings: Json | null
+          id: string
+          is_default: boolean | null
+          name: string
+          sections: Json
+          template_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          format_settings?: Json | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sections: Json
+          template_type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          format_settings?: Json | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sections?: Json
+          template_type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

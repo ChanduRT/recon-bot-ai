@@ -10,7 +10,8 @@ import {
   Target,
   AlertTriangle,
   Terminal,
-  History
+  History,
+  Users
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -36,6 +37,7 @@ const mainNavItems = [
 const agentItems = [
   { title: "AI Agents", url: "/agents", icon: Brain },
   { title: "Agent Analytics", url: "/agent-analytics", icon: BarChart3 },
+  { title: "APT Planning", url: "/apt-planning", icon: Target },
 ];
 
 const toolsItems = [
