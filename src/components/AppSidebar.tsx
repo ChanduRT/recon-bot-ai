@@ -39,6 +39,7 @@ const agentItems = [
 ];
 
 const toolsItems = [
+  { title: "Tools Monitor", url: "/tools", icon: Activity },
   { title: "Network Tools", url: "/network-tools", icon: Terminal },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

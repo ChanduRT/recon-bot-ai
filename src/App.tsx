@@ -10,6 +10,7 @@ import History from "./pages/History";
 import ThreatIntel from "./pages/ThreatIntel";
 import AgentManagement from "./pages/AgentManagement";
 import NetworkTools from "./pages/NetworkTools";
+import Tools from "./pages/Tools";
 import ScanDetails from "./pages/ScanDetails";
 import Settings from "./pages/Settings";
 import AgentAnalytics from "./pages/AgentAnalytics";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/threat-intel" element={<ThreatIntel />} />
           <Route path="/agents" element={<AgentManagement />} />
           <Route path="/agent-analytics" element={<AgentAnalytics />} />
+          <Route path="/tools" element={<Tools />} />
           <Route path="/network-tools" element={<NetworkTools />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
