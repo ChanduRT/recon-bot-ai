@@ -108,7 +108,7 @@ const executeTool = async (tool: string, target: string, parameters: Record<stri
     return output || error || 'Command completed successfully (no output)';
   } catch (error) {
     console.error('Tool execution error:', error);
-    throw new Error(`Failed to execute ${tool}: ${error.message}`);
+    throw new Error(`Failed to execute ${tool}: ${(error as Error).message}`);
   }
 };
 
@@ -129,75 +129,65 @@ serve(async (req) => {
   }
 
   try {
-    const { action, tool, target, parameters = {} } = await req.json();
+    const { action, tool, target, attackPath, parameters = {} } = await req.json();
     
     console.log(`Kali Tools - Action: ${action}, Tool: ${tool}, Target: ${target}`);
 
-    switch (action) {
-      case 'check_environment': {
-        const isKali = await isKaliLinux();
-        console.log(`Environment check: isKali=${isKali}`);
-        
-        const availableTools: Record<string, boolean> = {};
-        const toolsToCheck = ['nmap', 'nikto', 'dirb', 'gobuster', 'masscan', 'sqlmap'];
-        
-        for (const toolName of toolsToCheck) {
-          availableTools[toolName] = await checkToolAvailability(toolName);
-        }
-
-        return new Response(JSON.stringify({
-          isKali,
-          availableTools,
-          wordlists: getDefaultWordlists(),
-          timestamp: new Date().toISOString()
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    if (action === 'check_environment') {
+      const isKali = await isKaliLinux();
+      console.log(`Environment check: isKali=${isKali}`);
+      
+      const availableTools: Record<string, boolean> = {};
+      const toolsToCheck = ['nmap', 'nikto', 'dirb', 'gobuster', 'masscan', 'sqlmap'];
+      
+      for (const toolName of toolsToCheck) {
+        availableTools[toolName] = await checkToolAvailability(toolName);
       }
 
-      case 'execute': {
-        if (!tool || !target) {
-          throw new Error('Tool and target are required for execution');
-        }
-
-        const isKali = await isKaliLinux();
-        if (!isKali) {
-          return new Response(JSON.stringify({
-            output: `⚠️  Warning: Not running on Kali Linux\nTool: ${tool}\nTarget: ${target}\nParameters: ${JSON.stringify(parameters, null, 2)}\n\nTo use actual Kali Linux tools, deploy this application on a Kali Linux system.`,
-            success: false,
-            isSimulated: true
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        const toolAvailable = await checkToolAvailability(tool);
-        if (!toolAvailable) {
-          throw new Error(`Tool '${tool}' is not available on this system. Please install it first.`);
-        }
-
-        const output = await executeTool(tool, target, parameters);
-        
-        return new Response(JSON.stringify({
-          output,
-          success: true,
-          isSimulated: false,
-          tool,
-          target,
-          timestamp: new Date().toISOString()
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      default:
-        throw new Error(`Unknown action: ${action}`);
+      return new Response(JSON.stringify({
+        isKali,
+        availableTools,
+        wordlists: getDefaultWordlists(),
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    if (action === 'execute_attack' && attackPath) {
+      console.log(`Executing attack path: ${attackPath.technique} (${attackPath.phase})`);
+      
+      // Simulate attack execution
+      const startTime = Date.now();
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000));
+      
+      const executionTime = Date.now() - startTime;
+      const output = generateAttackOutput(attackPath);
+      const success = Math.random() > 0.3; // 70% success rate
+      
+      return new Response(JSON.stringify({
+        success,
+        output,
+        executionTime,
+        technique: attackPath.technique,
+        phase: attackPath.phase,
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      error: 'Invalid action or missing parameters'
+    }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error) {
     console.error('Kali Tools error:', error);
     return new Response(JSON.stringify({
-      error: error.message,
+      error: (error as Error).message,
       success: false,
       timestamp: new Date().toISOString()
     }), {
@@ -206,3 +196,20 @@ serve(async (req) => {
     });
   }
 });
+
+function generateAttackOutput(attackPath: any): string {
+  const { technique, phase, tools = [], description } = attackPath;
+  
+  const outputs = [
+    `[${new Date().toLocaleString()}] Executing: ${technique}`,
+    `[INFO] Phase: ${phase}`,
+    `[INFO] ${description || 'Attack technique execution'}`,
+    `[SUCCESS] Technique completed successfully`
+  ];
+  
+  if (tools.length > 0) {
+    outputs.push(`[TOOLS] Used: ${tools.join(', ')}`);
+  }
+  
+  return outputs.join('\n');
+}

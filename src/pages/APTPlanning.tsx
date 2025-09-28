@@ -53,7 +53,7 @@ interface AttackPath {
 const APTPlanning = () => {
   const [user, setUser] = useState(null);
   const [campaigns, setCampaigns] = useState<APTCampaign[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [scans, setScans] = useState<Scan[]>([]);
   const [attackPaths, setAttackPaths] = useState<AttackPath[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,11 +103,11 @@ const APTPlanning = () => {
       setScans(scansData || []);
 
       // Fetch attack paths if campaign is selected
-      if (selectedCampaign) {
+      if (selectedCampaignId) {
         const { data: pathsData, error: pathsError } = await supabase
           .from('attack_paths')
           .select('*')
-          .eq('campaign_id', selectedCampaign)
+          .eq('campaign_id', selectedCampaignId)
           .order('execution_order', { ascending: true });
 
         if (pathsError) throw pathsError;
@@ -140,7 +140,7 @@ const APTPlanning = () => {
       if (error) throw error;
 
       setCampaigns([data, ...campaigns]);
-      setSelectedCampaign(data.id);
+      setSelectedCampaignId(data.id);
       toast({
         title: "Success",
         description: "New APT campaign created",
@@ -214,7 +214,7 @@ const APTPlanning = () => {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4 items-center">
-              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+              <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
                 <SelectTrigger className="w-[300px]">
                   <SelectValue placeholder="Select a campaign" />
                 </SelectTrigger>
@@ -232,7 +232,7 @@ const APTPlanning = () => {
                 </SelectContent>
               </Select>
               
-              {selectedCampaign && (
+              {selectedCampaignId && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   {attackPaths.length} attack paths planned
@@ -252,13 +252,14 @@ const APTPlanning = () => {
           </AlertDescription>
         </Alert>
 
-        {selectedCampaign ? (
+        {selectedCampaignId ? (
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="overview">Campaign Overview</TabsTrigger>
-              <TabsTrigger value="mitre">MITRE ATT&CK</TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="control">Control</TabsTrigger>
+              <TabsTrigger value="mitre">MITRE</TabsTrigger>
               <TabsTrigger value="killchain">Kill Chain</TabsTrigger>
-              <TabsTrigger value="paths">Attack Paths</TabsTrigger>
+              <TabsTrigger value="execution">Execute</TabsTrigger>
               <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
@@ -321,29 +322,33 @@ const APTPlanning = () => {
               </div>
             </TabsContent>
 
+            <TabsContent value="control">
+              <CampaignManager
+                campaign={campaigns.find(c => c.id === selectedCampaignId)}
+                scans={scans}
+                attackPaths={attackPaths}
+                onCampaignUpdate={fetchData}
+              />
+            </TabsContent>
+
             <TabsContent value="mitre">
               <MitreMatrix 
-                campaignId={selectedCampaign}
+                campaignId={selectedCampaignId}
                 scans={scans}
-                onTechniqueSelect={(technique) => {
-                  toast({
-                    title: "Technique Selected",
-                    description: `Added ${technique} to attack path`,
-                  });
-                }}
+                onTechniqueSelect={fetchData}
               />
             </TabsContent>
 
             <TabsContent value="killchain">
               <KillChainTimeline 
-                campaignId={selectedCampaign}
+                campaignId={selectedCampaignId}
                 attackPaths={attackPaths}
               />
             </TabsContent>
 
-            <TabsContent value="paths">
-              <AttackPathVisualization 
-                campaignId={selectedCampaign}
+            <TabsContent value="execution">
+              <AttackExecutor
+                campaign={campaigns.find(c => c.id === selectedCampaignId)}
                 attackPaths={attackPaths}
                 onPathUpdate={fetchData}
               />
@@ -351,7 +356,7 @@ const APTPlanning = () => {
 
             <TabsContent value="reports">
               <ReportGenerator 
-                campaignId={selectedCampaign}
+                campaignId={selectedCampaignId}
                 scans={scans}
                 attackPaths={attackPaths}
               />
