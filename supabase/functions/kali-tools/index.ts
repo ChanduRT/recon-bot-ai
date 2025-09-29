@@ -23,7 +23,8 @@ const checkToolAvailability = async (tool: string): Promise<boolean> => {
     });
     const { success } = await command.output();
     return success;
-  } catch {
+  } catch (error) {
+    console.log(`Tool availability check failed for ${tool}:`, error);
     return false;
   }
 };
@@ -134,18 +135,60 @@ serve(async (req) => {
       const availableTools: Record<string, boolean> = {};
       const toolsToCheck = ['nmap', 'nikto', 'dirb', 'gobuster', 'masscan', 'sqlmap'];
       
+      // Check tool availability with detailed logging
       for (const toolName of toolsToCheck) {
-        availableTools[toolName] = await checkToolAvailability(toolName);
+        const available = await checkToolAvailability(toolName);
+        availableTools[toolName] = available;
+        console.log(`Tool ${toolName}: ${available ? 'available' : 'not found'}`);
       }
 
-      return new Response(JSON.stringify({
+      const responseData = {
         isKali,
         availableTools,
         wordlists: getDefaultWordlists(),
-        timestamp: new Date().toISOString()
-      }), {
+        timestamp: new Date().toISOString(),
+        toolsSummary: Object.entries(availableTools).map(([tool, available]) => 
+          `${tool}: ${available ? '✓' : '✗'}`
+        ).join(', ')
+      };
+
+      console.log('Environment check response:', responseData);
+
+      return new Response(JSON.stringify(responseData), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    if (action === 'execute' && tool && target) {
+      console.log(`Executing tool: ${tool} against target: ${target}`);
+      
+      try {
+        const output = await executeTool(tool, target, parameters);
+        
+        return new Response(JSON.stringify({
+          success: true,
+          output,
+          tool,
+          target,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error) {
+        console.error('Tool execution error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        
+        return new Response(JSON.stringify({
+          success: false,
+          output: `Error executing ${tool}: ${errorMessage}`,
+          tool,
+          target,
+          timestamp: new Date().toISOString()
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     if (action === 'execute_attack' && attackPath) {

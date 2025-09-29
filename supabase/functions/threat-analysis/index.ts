@@ -44,6 +44,8 @@ serve(async (req) => {
 
     let threatIntelligence = existingThreat;
     let analysisResults: any = {};
+    let threatLevel = 'low';
+    let description = 'No significant threats detected in initial analysis';
 
     // If no existing threat intelligence, perform analysis
     if (!existingThreat) {
@@ -86,33 +88,65 @@ serve(async (req) => {
             const vtData = await vtResponse.json();
             analysisResults.virustotal = vtData;
 
-            // Determine threat level based on VirusTotal results
-            let threatLevel = 'low';
-            let description = 'No significant threats detected';
+            // Determine threat level and create detailed description based on VirusTotal results
+            let vtThreatLevel = 'low';
+            let vtDescription = 'No significant threats detected in initial analysis';
 
             if (iocType === 'ip' || iocType === 'domain') {
               const detectedUrls = vtData.detected_urls || [];
               const maliciousCount = detectedUrls.length;
+              const detectedSamples = vtData.detected_downloaded_samples || [];
+              const communicatingSamples = vtData.detected_communicating_samples || [];
               
-              if (maliciousCount > 5) {
-                threatLevel = 'high';
-                description = `High threat: ${maliciousCount} malicious URLs detected`;
-              } else if (maliciousCount > 0) {
-                threatLevel = 'medium';
-                description = `Medium threat: ${maliciousCount} malicious URLs detected`;
+              if (maliciousCount > 10 || detectedSamples.length > 5) {
+                vtThreatLevel = 'critical';
+                vtDescription = `Critical threat infrastructure: ${maliciousCount} malicious URLs and ${detectedSamples.length} malware samples detected. High confidence C2 or malware distribution site.`;
+              } else if (maliciousCount > 5 || detectedSamples.length > 0) {
+                vtThreatLevel = 'high';
+                vtDescription = `High threat ${iocType}: ${maliciousCount} malicious URLs detected with ${detectedSamples.length} associated malware samples. Likely compromised or malicious infrastructure.`;
+              } else if (maliciousCount > 0 || communicatingSamples.length > 0) {
+                vtThreatLevel = 'medium';
+                vtDescription = `Medium threat ${iocType}: ${maliciousCount} suspicious URLs and ${communicatingSamples.length} communicating samples detected. Monitor for potential compromise.`;
+              } else {
+                vtDescription = `${iocType.toUpperCase()} appears clean in VirusTotal analysis with no detected malicious activity.`;
               }
-            } else if (iocType === 'hash' || iocType === 'url') {
+            } else if (iocType === 'hash') {
               const positives = vtData.positives || 0;
               const total = vtData.total || 0;
               
-              if (positives > total * 0.3) {
-                threatLevel = 'high';
-                description = `High threat: ${positives}/${total} engines detected malware`;
+              if (positives > total * 0.5) {
+                vtThreatLevel = 'critical';
+                vtDescription = `Critical malware detected: ${positives}/${total} security engines flagged this file hash as malicious. High confidence malware.`;
+              } else if (positives > total * 0.3) {
+                vtThreatLevel = 'high';
+                vtDescription = `High threat file: ${positives}/${total} security engines detected malware signatures. Likely malicious file.`;
               } else if (positives > 0) {
-                threatLevel = 'medium';
-                description = `Medium threat: ${positives}/${total} engines detected malware`;
+                vtThreatLevel = 'medium';
+                vtDescription = `Suspicious file: ${positives}/${total} security engines flagged this hash. May contain potentially unwanted software or false positives.`;
+              } else {
+                vtDescription = `File hash appears clean with ${total} security engines reporting no threats detected.`;
+              }
+            } else if (iocType === 'url') {
+              const positives = vtData.positives || 0;
+              const total = vtData.total || 0;
+              
+              if (positives > total * 0.4) {
+                vtThreatLevel = 'critical';
+                vtDescription = `Critical malicious URL: ${positives}/${total} security engines flagged this URL as dangerous. High risk of malware, phishing, or exploit delivery.`;
+              } else if (positives > total * 0.2) {
+                vtThreatLevel = 'high'; 
+                vtDescription = `High risk URL: ${positives}/${total} security engines detected threats. May host malware, phishing content, or exploits.`;
+              } else if (positives > 0) {
+                vtThreatLevel = 'medium';
+                vtDescription = `Suspicious URL: ${positives}/${total} security engines flagged potential threats. Monitor for malicious activity.`;
+              } else {
+                vtDescription = `URL appears clean with ${total} security engines reporting no threats detected.`;
               }
             }
+
+            // Update global variables
+            threatLevel = vtThreatLevel;
+            description = vtDescription;
 
             // Store threat intelligence
             const { data: newThreat } = await supabase
@@ -142,20 +176,25 @@ serve(async (req) => {
       // AI-powered threat analysis
       try {
         const aiPrompt = `
-Analyze the following Indicator of Compromise (IOC) for cybersecurity threats:
+You are a cybersecurity threat intelligence analyst. Analyze the IOC and provide detailed, actionable threat intelligence.
 
 IOC: ${ioc}
 Type: ${iocType}
 ${analysisResults.virustotal ? `VirusTotal Data: ${JSON.stringify(analysisResults.virustotal, null, 2)}` : ''}
 
-Provide a comprehensive threat analysis including:
-1. Threat classification and severity (low, medium, high, critical)
-2. Potential attack vectors
-3. Associated threat actors or campaigns (if known)
-4. Recommended defensive actions
-5. Confidence score (0-100)
+Provide a detailed threat analysis with:
 
-Format your response as JSON.
+1. **Threat Description**: A clear, detailed explanation of what this IOC represents and why it's dangerous
+2. **Attack Methods**: Specific attack techniques and methods associated with this IOC
+3. **Impact Assessment**: What damage could occur if this threat is successful
+4. **Indicators**: Additional IOCs or patterns to watch for
+5. **Mitigation Steps**: Specific, actionable steps to defend against this threat
+6. **Context**: Any known campaigns, threat actors, or historical context
+7. **Severity**: Risk level assessment with justification
+8. **Confidence**: Your confidence in this analysis (0-100)
+
+Be specific and provide actionable intelligence that security teams can use immediately.
+Format your response as JSON with these exact fields: description, attack_methods, impact_assessment, related_indicators, mitigation_steps, threat_context, severity_level, confidence_score.
         `;
 
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -180,9 +219,30 @@ Format your response as JSON.
           const aiAnalysis = aiResult.choices[0].message.content;
           
           try {
-            analysisResults.ai_analysis = JSON.parse(aiAnalysis);
+            const parsedAnalysis = JSON.parse(aiAnalysis);
+            analysisResults.ai_analysis = parsedAnalysis;
+            
+            // Update threat intelligence with AI-generated description if it's more detailed
+            if (parsedAnalysis.description && parsedAnalysis.description.length > description.length) {
+              description = parsedAnalysis.description;
+            }
+            
+            // Update threat level if AI suggests higher severity
+            if (parsedAnalysis.severity_level) {
+              const aiThreatLevel = parsedAnalysis.severity_level.toLowerCase();
+              const threatLevels: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+              const currentLevel = threatLevels[threatLevel] || 1;
+              const aiLevel = threatLevels[aiThreatLevel] || 1;
+              
+              if (aiLevel > currentLevel) {
+                threatLevel = aiThreatLevel;
+              }
+            }
           } catch {
-            analysisResults.ai_analysis = { raw_analysis: aiAnalysis };
+            analysisResults.ai_analysis = { 
+              raw_analysis: aiAnalysis,
+              error: "Failed to parse AI analysis as JSON"
+            };
           }
         }
 
