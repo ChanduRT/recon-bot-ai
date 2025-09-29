@@ -31,8 +31,18 @@ serve(async (req) => {
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
-    const { target, services }: ReconRequest = await req.json();
+    const requestBody = await req.json();
+    const { target, services = [] }: ReconRequest = requestBody;
     const results: Record<string, any> = {};
+    
+    console.log('Reconnaissance request:', { target, services });
+    
+    if (!target) {
+      return new Response(JSON.stringify({ error: 'Target is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Log API usage
     const logApiUsage = async (serviceName: string, endpoint: string, status: number) => {
@@ -45,7 +55,7 @@ serve(async (req) => {
     };
 
     // Shodan integration
-    if (services.includes('shodan')) {
+    if (services && services.length > 0 && services.includes('shodan')) {
       try {
         const shodanResponse = await fetch(`https://api.shodan.io/shodan/host/${target}?key=${Deno.env.get('SHODAN_API_KEY')}`);
         await logApiUsage('shodan', '/shodan/host', shodanResponse.status);
@@ -79,8 +89,8 @@ serve(async (req) => {
       }
     }
 
-    // VirusTotal integration
-    if (services.includes('virustotal')) {
+    // VirusTotal integration  
+    if (services && services.length > 0 && services.includes('virustotal')) {
       try {
         // For IP addresses
         const vtResponse = await fetch(`https://www.virustotal.com/vtapi/v2/ip-address/report?apikey=${Deno.env.get('VIRUSTOTAL_API_KEY')}&ip=${target}`);
@@ -109,7 +119,7 @@ serve(async (req) => {
     }
 
     // IPInfo integration
-    if (services.includes('ipinfo')) {
+    if (services && services.length > 0 && services.includes('ipinfo')) {
       try {
         const ipinfoResponse = await fetch(`https://ipinfo.io/${target}?token=${Deno.env.get('IPINFO_API_KEY')}`);
         await logApiUsage('ipinfo', '/ip', ipinfoResponse.status);
@@ -140,8 +150,8 @@ serve(async (req) => {
       }
     }
 
-    // Additional DNS reconnaissance for domains
-    if (target.includes('.') && !target.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+    // Additional DNS reconnaissance for domains (if DNS service requested or no services specified)
+    if ((!services || services.length === 0 || services.includes('dns')) && target.includes('.') && !target.match(/^\d+\.\d+\.\d+\.\d+$/)) {
       try {
         // Basic DNS lookups would go here
         // For now, we'll add a placeholder for DNS data

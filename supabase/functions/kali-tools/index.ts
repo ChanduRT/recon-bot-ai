@@ -7,24 +7,175 @@ const corsHeaders = {
 
 const isKaliLinux = async (): Promise<boolean> => {
   try {
-    const osRelease = await Deno.readTextFile('/etc/os-release');
-    return osRelease.includes('Kali') || osRelease.includes('kali');
-  } catch {
+    // Try multiple detection methods
+    console.log('Checking for Kali Linux environment...');
+    
+    // Method 1: Check /etc/os-release
+    try {
+      const osRelease = await Deno.readTextFile('/etc/os-release');
+      console.log('OS Release content:', osRelease);
+      if (osRelease.toLowerCase().includes('kali')) {
+        console.log('Kali detected via /etc/os-release');
+        return true;
+      }
+    } catch (e) {
+      console.log('Could not read /etc/os-release:', e);
+    }
+    
+    // Method 2: Check /etc/debian_version (Kali is Debian-based)
+    try {
+      const debianVersion = await Deno.readTextFile('/etc/debian_version');
+      console.log('Debian version:', debianVersion);
+      if (debianVersion.toLowerCase().includes('kali')) {
+        console.log('Kali detected via /etc/debian_version');
+        return true;
+      }
+    } catch (e) {
+      console.log('Could not read /etc/debian_version:', e);
+    }
+    
+    // Method 3: Check lsb_release command
+    try {
+      const lsbCommand = new Deno.Command("lsb_release", {
+        args: ["-i"],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const { success, stdout } = await lsbCommand.output();
+      if (success) {
+        const output = new TextDecoder().decode(stdout);
+        console.log('LSB Release output:', output);
+        if (output.toLowerCase().includes('kali')) {
+          console.log('Kali detected via lsb_release');
+          return true;
+        }
+      }
+    } catch (e) {
+      console.log('Could not run lsb_release:', e);
+    }
+    
+    // Method 4: Check uname for Kali-specific kernel
+    try {
+      const unameCommand = new Deno.Command("uname", {
+        args: ["-a"],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const { success, stdout } = await unameCommand.output();
+      if (success) {
+        const output = new TextDecoder().decode(stdout);
+        console.log('Uname output:', output);
+        if (output.toLowerCase().includes('kali')) {
+          console.log('Kali detected via uname');
+          return true;
+        }
+      }
+    } catch (e) {
+      console.log('Could not run uname:', e);
+    }
+    
+    // Method 5: Check for Kali-specific directories
+    try {
+      const kaliPaths = ['/usr/share/kali-menu', '/etc/apt/sources.list.d/kali.list', '/usr/share/kali-defaults'];
+      for (const path of kaliPaths) {
+        try {
+          const stat = await Deno.stat(path);
+          if (stat) {
+            console.log(`Kali detected via path: ${path}`);
+            return true;
+          }
+        } catch {
+          // Path doesn't exist, continue
+        }
+      }
+    } catch (e) {
+      console.log('Could not check Kali paths:', e);
+    }
+    
+    console.log('No Kali Linux indicators found');
+    return false;
+  } catch (error) {
+    console.error('Error in Kali detection:', error);
     return false;
   }
 };
 
 const checkToolAvailability = async (tool: string): Promise<boolean> => {
   try {
-    const command = new Deno.Command("which", {
-      args: [tool],
-      stdout: "piped",
-      stderr: "piped",
-    });
-    const { success } = await command.output();
-    return success;
+    console.log(`Checking availability of tool: ${tool}`);
+    
+    // Method 1: Check with 'which' command
+    try {
+      const whichCommand = new Deno.Command("which", {
+        args: [tool],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const { success, stdout, stderr } = await whichCommand.output();
+      const output = new TextDecoder().decode(stdout);
+      const errorOutput = new TextDecoder().decode(stderr);
+      
+      console.log(`'which ${tool}' - success: ${success}, output: '${output.trim()}', error: '${errorOutput.trim()}'`);
+      
+      if (success && output.trim()) {
+        console.log(`Tool ${tool} found at: ${output.trim()}`);
+        return true;
+      }
+    } catch (e) {
+      console.log(`'which' command failed for ${tool}:`, e);
+    }
+    
+    // Method 2: Try to run the tool with --version or --help
+    try {
+      const testArgs = tool === 'nmap' ? ['--version'] : 
+                     tool === 'nikto' ? ['-Version'] :
+                     tool === 'dirb' ? [] :
+                     tool === 'gobuster' ? ['version'] :
+                     tool === 'masscan' ? ['--version'] :
+                     tool === 'sqlmap' ? ['--version'] : ['--help'];
+      
+      const testCommand = new Deno.Command(tool, {
+        args: testArgs,
+        stdout: "piped",
+        stderr: "piped",
+      });
+      
+      const { success } = await testCommand.output();
+      console.log(`Direct execution test for ${tool}: ${success}`);
+      
+      if (success) {
+        console.log(`Tool ${tool} is executable`);
+        return true;
+      }
+    } catch (e) {
+      console.log(`Direct execution test failed for ${tool}:`, e);
+    }
+    
+    // Method 3: Check common installation paths
+    const commonPaths = [
+      `/usr/bin/${tool}`,
+      `/usr/local/bin/${tool}`,
+      `/bin/${tool}`,
+      `/sbin/${tool}`,
+      `/usr/sbin/${tool}`
+    ];
+    
+    for (const path of commonPaths) {
+      try {
+        const stat = await Deno.stat(path);
+        if (stat && stat.isFile) {
+          console.log(`Tool ${tool} found at path: ${path}`);
+          return true;
+        }
+      } catch {
+        // Path doesn't exist or not accessible
+      }
+    }
+    
+    console.log(`Tool ${tool} not found`);
+    return false;
   } catch (error) {
-    console.log(`Tool availability check failed for ${tool}:`, error);
+    console.error(`Tool availability check failed for ${tool}:`, error);
     return false;
   }
 };
