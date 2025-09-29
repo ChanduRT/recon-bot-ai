@@ -74,6 +74,14 @@ serve(async (req) => {
         if (vtEndpoint) {
           const vtResponse = await fetch(`${vtEndpoint}?${vtParams}`);
           
+          // Log API usage
+          await supabase.from('api_usage').insert({
+            user_id: user.id,
+            service_name: 'virustotal',
+            endpoint: vtEndpoint.split('?')[0],
+            response_status: vtResponse?.status || 0
+          });
+          
           if (vtResponse.ok) {
             const vtData = await vtResponse.json();
             analysisResults.virustotal = vtData;
@@ -125,17 +133,10 @@ serve(async (req) => {
           }
         }
 
-        // Log API usage
-        await supabase.from('api_usage').insert({
-          user_id: user.id,
-          service_name: 'virustotal',
-          endpoint: vtEndpoint.split('?')[0],
-          response_status: vtResponse?.status || 0
-        });
-
       } catch (error) {
         console.error('VirusTotal analysis error:', error);
-        analysisResults.virustotal = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        analysisResults.virustotal = { error: errorMessage };
       }
 
       // AI-powered threat analysis
@@ -187,7 +188,8 @@ Format your response as JSON.
 
       } catch (error) {
         console.error('AI analysis error:', error);
-        analysisResults.ai_analysis = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        analysisResults.ai_analysis = { error: errorMessage };
       }
     }
 
@@ -211,7 +213,8 @@ Format your response as JSON.
 
   } catch (error) {
     console.error('Error in threat analysis:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

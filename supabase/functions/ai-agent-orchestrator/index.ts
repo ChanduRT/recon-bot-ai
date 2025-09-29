@@ -145,11 +145,12 @@ serve(async (req) => {
         console.error(`Agent ${agent.name} failed:`, error);
         
         // Update execution with error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         await supabase
           .from('agent_executions')
           .update({
             status: 'failed',
-            error_message: error.message,
+            error_message: errorMessage,
             execution_time_ms: Date.now() - startTime,
             completed_at: new Date().toISOString()
           })
@@ -158,7 +159,7 @@ serve(async (req) => {
 
         return {
           agent: agent.name,
-          error: error.message,
+          error: errorMessage,
           execution_time_ms: Date.now() - startTime
         };
       }
@@ -215,7 +216,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in AI orchestrator:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

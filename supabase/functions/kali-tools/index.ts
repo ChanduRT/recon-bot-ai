@@ -16,14 +16,13 @@ const isKaliLinux = async (): Promise<boolean> => {
 
 const checkToolAvailability = async (tool: string): Promise<boolean> => {
   try {
-    const process = Deno.run({
-      cmd: ["which", tool],
+    const command = new Deno.Command("which", {
+      args: [tool],
       stdout: "piped",
       stderr: "piped",
     });
-    const status = await process.status();
-    process.close();
-    return status.success;
+    const { success } = await command.output();
+    return success;
   } catch {
     return false;
   }
@@ -84,31 +83,26 @@ const executeTool = async (tool: string, target: string, parameters: Record<stri
   console.log(`Executing command: ${command.join(' ')}`);
 
   try {
-    const process = Deno.run({
-      cmd: command,
+    const cmd = new Deno.Command(command[0], {
+      args: command.slice(1),
       stdout: "piped",
       stderr: "piped",
     });
 
-    const [status, stdout, stderr] = await Promise.all([
-      process.status(),
-      process.output(),
-      process.stderrOutput(),
-    ]);
-
-    process.close();
+    const { success, stdout, stderr, code } = await cmd.output();
 
     const output = new TextDecoder().decode(stdout);
     const error = new TextDecoder().decode(stderr);
 
-    if (!status.success) {
-      return `Command failed with exit code ${status.code}\n\nSTDOUT:\n${output}\n\nSTDERR:\n${error}`;
+    if (!success) {
+      return `Command failed with exit code ${code}\n\nSTDOUT:\n${output}\n\nSTDERR:\n${error}`;
     }
 
     return output || error || 'Command completed successfully (no output)';
   } catch (error) {
     console.error('Tool execution error:', error);
-    throw new Error(`Failed to execute ${tool}: ${(error as Error).message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Failed to execute ${tool}: ${errorMessage}`);
   }
 };
 
@@ -186,8 +180,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Kali Tools error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(JSON.stringify({
-      error: (error as Error).message,
+      error: errorMessage,
       success: false,
       timestamp: new Date().toISOString()
     }), {

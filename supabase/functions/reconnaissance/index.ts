@@ -74,7 +74,8 @@ serve(async (req) => {
           results.shodan = { error: 'Failed to fetch Shodan data', status: shodanResponse.status };
         }
       } catch (error) {
-        results.shodan = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        results.shodan = { error: errorMessage };
       }
     }
 
@@ -102,7 +103,8 @@ serve(async (req) => {
           results.virustotal = { error: 'Failed to fetch VirusTotal data', status: vtResponse.status };
         }
       } catch (error) {
-        results.virustotal = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        results.virustotal = { error: errorMessage };
       }
     }
 
@@ -133,7 +135,8 @@ serve(async (req) => {
           results.ipinfo = { error: 'Failed to fetch IPInfo data', status: ipinfoResponse.status };
         }
       } catch (error) {
-        results.ipinfo = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        results.ipinfo = { error: errorMessage };
       }
     }
 
@@ -147,7 +150,8 @@ serve(async (req) => {
           note: 'DNS reconnaissance would be performed here with appropriate DNS libraries'
         };
       } catch (error) {
-        results.dns = { error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        results.dns = { error: errorMessage };
       }
     }
 
@@ -162,7 +166,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in reconnaissance:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -13,6 +13,8 @@ import { MitreMatrix } from "@/components/MitreMatrix";
 import { KillChainTimeline } from "@/components/KillChainTimeline";
 import { AttackPathVisualization } from "@/components/AttackPathVisualization";
 import { ReportGenerator } from "@/components/ReportGenerator";
+import { CampaignManager } from "@/components/CampaignManager";
+import { AttackExecutor } from "@/components/AttackExecutor";
 
 interface APTCampaign {
   id: string;
