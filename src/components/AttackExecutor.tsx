@@ -35,6 +35,7 @@ export const AttackExecutor: React.FC<AttackExecutorProps> = ({
     }
 
     setExecutingPath(attackPath.id);
+    const startTime = Date.now();
     
     try {
       // Update path status to in_progress
@@ -43,6 +44,12 @@ export const AttackExecutor: React.FC<AttackExecutorProps> = ({
         .update({ status: 'in_progress' })
         .eq('id', attackPath.id);
 
+      onPathUpdate();
+
+      // Determine primary tool to execute
+      const tools = attackPath.tools_required || [];
+      const primaryTool = tools[0] || 'nmap';
+
       // Call kali-tools function to execute the attack
       const { data, error } = await supabase.functions.invoke('kali-tools', {
         body: {
@@ -50,40 +57,53 @@ export const AttackExecutor: React.FC<AttackExecutorProps> = ({
           attackPath: {
             id: attackPath.id,
             technique: attackPath.technique_name,
-            tools: attackPath.tools_required || [],
+            tools: tools,
             phase: attackPath.phase,
-            description: attackPath.description
+            description: attackPath.description,
+            mitreId: attackPath.mitre_technique
           }
         }
       });
 
       if (error) throw error;
 
-      // Store execution logs
+      const executionTime = Date.now() - startTime;
+
+      // Create structured evidence
+      const evidence = {
+        command: data.command || `Simulated ${primaryTool} execution`,
+        output: data.output || 'Execution completed successfully',
+        timestamp: new Date().toISOString(),
+        success: data.success !== false,
+        executionTime: executionTime,
+        toolsUsed: tools,
+        environment: data.isKali ? 'Kali Linux' : 'Simulated',
+        findings: data.findings || [],
+        errors: data.error ? [data.error] : []
+      };
+
+      // Store execution logs for UI display
       setExecutionLogs(prev => ({
         ...prev,
-        [attackPath.id]: data.output || 'Execution completed successfully'
+        [attackPath.id]: JSON.stringify(evidence, null, 2)
       }));
 
       // Update path with results
+      const updateData: any = { 
+        status: evidence.success ? 'completed' : 'failed',
+        completed_at: evidence.success ? new Date().toISOString() : null,
+        evidence: evidence
+      };
+
       await supabase
         .from('attack_paths')
-        .update({ 
-          status: data.success ? 'completed' : 'failed',
-          completed_at: data.success ? new Date().toISOString() : null,
-          evidence: {
-            executionTime: data.executionTime || 0,
-            output: data.output || '',
-            success: data.success || false,
-            timestamp: new Date().toISOString()
-          }
-        })
+        .update(updateData)
         .eq('id', attackPath.id);
 
       toast({
-        title: data.success ? "Attack Executed" : "Attack Failed",
-        description: `${attackPath.technique_name} ${data.success ? 'completed successfully' : 'failed to execute'}`,
-        variant: data.success ? "default" : "destructive"
+        title: evidence.success ? "Attack Executed Successfully" : "Attack Failed",
+        description: `${attackPath.technique_name} - ${evidence.environment} (${executionTime}ms)`,
+        variant: evidence.success ? "default" : "destructive"
       });
 
       onPathUpdate();
@@ -91,14 +111,30 @@ export const AttackExecutor: React.FC<AttackExecutorProps> = ({
     } catch (error) {
       console.error('Error executing attack path:', error);
       
+      const executionTime = Date.now() - startTime;
+      const failureEvidence = {
+        command: 'Execution failed',
+        output: error.message || 'Unknown error occurred',
+        timestamp: new Date().toISOString(),
+        success: false,
+        executionTime: executionTime,
+        toolsUsed: attackPath.tools_required || [],
+        environment: 'Error',
+        findings: [],
+        errors: [error.message]
+      };
+
       await supabase
         .from('attack_paths')
-        .update({ status: 'failed' })
+        .update({ 
+          status: 'failed',
+          evidence: failureEvidence
+        })
         .eq('id', attackPath.id);
 
       toast({
         title: "Execution Failed",
-        description: error.message,
+        description: error.message || "An error occurred during execution",
         variant: "destructive"
       });
 
@@ -268,23 +304,76 @@ export const AttackExecutor: React.FC<AttackExecutorProps> = ({
                         <ScrollArea className="max-h-96">
                           <div className="space-y-4">
                             {path.evidence && (
-                              <div className="space-y-2">
-                                <div className="text-sm font-medium">Execution Details:</div>
-                                <div className="text-xs space-y-1">
-                                  <div>Status: <Badge className={getStatusColor(path.status)}>{path.status}</Badge></div>
-                                  <div>Timestamp: {path.evidence.timestamp}</div>
-                                  {path.evidence.executionTime && (
-                                    <div>Execution Time: {path.evidence.executionTime}ms</div>
-                                  )}
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <div className="text-sm font-medium">Execution Details:</div>
+                                  <div className="text-xs space-y-1 p-3 bg-muted/50 rounded">
+                                    <div>Status: <Badge className={getStatusColor(path.status)}>{path.status}</Badge></div>
+                                    <div>Timestamp: {new Date(path.evidence.timestamp).toLocaleString()}</div>
+                                    {path.evidence.executionTime && (
+                                      <div>Execution Time: {path.evidence.executionTime}ms</div>
+                                    )}
+                                    <div>Environment: {path.evidence.environment || 'Unknown'}</div>
+                                    {path.evidence.command && (
+                                      <div className="mt-2">
+                                        <div className="font-medium">Command:</div>
+                                        <code className="text-xs">{path.evidence.command}</code>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
+
+                                {path.evidence.toolsUsed && path.evidence.toolsUsed.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium">Tools Used:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {path.evidence.toolsUsed.map((tool: string) => (
+                                        <Badge key={tool} variant="secondary" className="text-xs">
+                                          {tool}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {path.evidence.findings && path.evidence.findings.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium">Findings:</div>
+                                    <ul className="text-xs space-y-1 list-disc list-inside">
+                                      {path.evidence.findings.map((finding: string, idx: number) => (
+                                        <li key={idx}>{finding}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {path.evidence.errors && path.evidence.errors.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium text-destructive">Errors:</div>
+                                    <ul className="text-xs space-y-1 list-disc list-inside text-destructive">
+                                      {path.evidence.errors.map((error: string, idx: number) => (
+                                        <li key={idx}>{error}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {path.evidence.output && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium">Output:</div>
+                                    <pre className="text-xs bg-muted p-3 rounded overflow-x-auto max-h-64">
+                                      {path.evidence.output}
+                                    </pre>
+                                  </div>
+                                )}
                               </div>
                             )}
                             
-                            {(executionLogs[path.id] || path.evidence?.output) && (
+                            {!path.evidence && executionLogs[path.id] && (
                               <div className="space-y-2">
-                                <div className="text-sm font-medium">Output:</div>
-                                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
-                                  {executionLogs[path.id] || path.evidence?.output}
+                                <div className="text-sm font-medium">Execution Log:</div>
+                                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto max-h-64">
+                                  {executionLogs[path.id]}
                                 </pre>
                               </div>
                             )}

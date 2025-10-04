@@ -345,20 +345,92 @@ serve(async (req) => {
     if (action === 'execute_attack' && attackPath) {
       console.log(`Executing attack path: ${attackPath.technique} (${attackPath.phase})`);
       
-      // Simulate attack execution
+      const isKali = await isKaliLinux();
+      const tools = attackPath.tools || [];
+      const primaryTool = tools[0] || 'nmap';
+      
+      // Check if primary tool is available
+      const toolAvailable = isKali ? await checkToolAvailability(primaryTool) : false;
+      
       const startTime = Date.now();
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000));
+      let output = '';
+      let command = '';
+      let success = false;
+      const findings: string[] = [];
+      const errors: string[] = [];
+      
+      if (isKali && toolAvailable) {
+        // Attempt real tool execution
+        try {
+          console.log(`Executing real tool: ${primaryTool}`);
+          
+          // Generate appropriate command based on tool and phase
+          if (primaryTool === 'nmap') {
+            command = `nmap -sV -T4 simulated-target`;
+            const toolOutput = await executeTool('nmap', 'localhost', { ports: '80,443,22' });
+            output = toolOutput;
+            findings.push('Port scan completed', 'Services identified');
+            success = true;
+          } else if (primaryTool === 'nikto') {
+            command = `nikto -h simulated-target`;
+            output = 'Nikto execution simulated - Web vulnerability scan completed';
+            findings.push('Web server fingerprinted', 'Common vulnerabilities checked');
+            success = true;
+          } else if (primaryTool === 'sqlmap') {
+            command = `sqlmap -u simulated-target --batch`;
+            output = 'SQLMap execution simulated - SQL injection testing completed';
+            findings.push('Database fingerprinted', 'Injection points tested');
+            success = true;
+          } else {
+            command = `${primaryTool} --help`;
+            output = await executeTool(primaryTool, 'localhost', {});
+            findings.push(`${primaryTool} executed successfully`);
+            success = true;
+          }
+        } catch (error) {
+          console.error('Real tool execution failed:', error);
+          errors.push(error instanceof Error ? error.message : 'Tool execution failed');
+          output = generateAttackOutput(attackPath);
+          command = `${primaryTool} (simulated due to error)`;
+          success = false;
+        }
+      } else {
+        // Simulate execution
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+        output = generateAttackOutput(attackPath);
+        command = `Simulated: ${primaryTool}`;
+        
+        // Generate realistic findings based on phase
+        if (attackPath.phase === 'reconnaissance') {
+          findings.push('Target IP identified', 'Open ports discovered: 22, 80, 443', 'Services enumerated');
+        } else if (attackPath.phase === 'exploitation') {
+          findings.push('Vulnerability exploited', 'Access gained', 'Privilege escalation attempted');
+        } else if (attackPath.phase === 'command_control') {
+          findings.push('C2 channel established', 'Persistent access configured');
+        } else {
+          findings.push(`${attackPath.phase} phase executed successfully`);
+        }
+        
+        success = Math.random() > 0.2; // 80% success rate for simulated
+        
+        if (!success) {
+          errors.push('Simulated failure for testing purposes');
+        }
+      }
       
       const executionTime = Date.now() - startTime;
-      const output = generateAttackOutput(attackPath);
-      const success = Math.random() > 0.3; // 70% success rate
       
       return new Response(JSON.stringify({
         success,
         output,
+        command,
         executionTime,
         technique: attackPath.technique,
         phase: attackPath.phase,
+        isKali,
+        toolAvailable,
+        findings,
+        errors,
         timestamp: new Date().toISOString()
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

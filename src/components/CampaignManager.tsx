@@ -66,6 +66,16 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({
   };
 
   const startCampaign = async () => {
+    // Validate attack paths exist
+    if (attackPaths.length === 0) {
+      toast({
+        title: "Cannot Start Campaign",
+        description: "Generate attack paths before starting the campaign",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsExecuting(true);
     try {
       const { error } = await supabase
@@ -80,7 +90,7 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({
 
       toast({
         title: "Campaign Started",
-        description: "APT simulation is now active"
+        description: `APT simulation is now active with ${attackPaths.length} attack paths`
       });
 
       onCampaignUpdate();
