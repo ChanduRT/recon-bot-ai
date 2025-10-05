@@ -12,7 +12,7 @@ import { Shield, Target, FileText, Download, Plus, Activity, Brain, AlertTriangl
 import { MitreMatrix } from "@/components/MitreMatrix";
 import { KillChainTimeline } from "@/components/KillChainTimeline";
 import { AttackPathVisualization } from "@/components/AttackPathVisualization";
-import { ReportGenerator } from "@/components/ReportGenerator";
+import { ReportExporter } from "@/components/ReportExporter";
 import { CampaignManager } from "@/components/CampaignManager";
 import { AttackExecutor } from "@/components/AttackExecutor";
 
@@ -357,8 +357,8 @@ const APTPlanning = () => {
             </TabsContent>
 
             <TabsContent value="reports">
-              <ReportGenerator 
-                campaignId={selectedCampaignId}
+              <ReportExporter 
+                campaign={campaigns.find(c => c.id === selectedCampaignId)}
                 scans={scans}
                 attackPaths={attackPaths}
               />
