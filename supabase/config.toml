@@ -1,1 +1,22 @@
 project_id = "lwyjfbiehindtuwuvkto"
+
+[functions.ai-agent-orchestrator]
+verify_jwt = false
+
+[functions.ai-attack-planner]
+verify_jwt = false
+
+[functions.apt-phase-analysis]
+verify_jwt = false
+
+[functions.kali-tools]
+verify_jwt = false
+
+[functions.rate-limiter]
+verify_jwt = false
+
+[functions.reconnaissance]
+verify_jwt = false
+
+[functions.threat-analysis]
+verify_jwt = false
