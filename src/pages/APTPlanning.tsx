@@ -4,8 +4,10 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, GraduationCap } from "lucide-react";
+import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, GraduationCap, Target } from "lucide-react";
 import { APTLifecycleTimeline } from "@/components/APTLifecycleTimeline";
 import { APTPhaseSimulation } from "@/components/APTPhaseSimulation";
 
@@ -14,6 +16,8 @@ const APTPlanning = () => {
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const { toast } = useToast();
 
   const totalPhases = 8;
@@ -22,17 +26,47 @@ const APTPlanning = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchCampaigns();
+        }
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchCampaigns();
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchCampaigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('apt_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCampaigns(data || []);
+      
+      // Auto-select first campaign if available
+      if (data && data.length > 0 && !selectedCampaign) {
+        setSelectedCampaign(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load campaigns",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Auto-advance phases when playing
   useEffect(() => {
@@ -118,6 +152,57 @@ const APTPlanning = () => {
           </div>
           <Shield className="h-12 w-12 text-muted-foreground opacity-20" />
         </div>
+
+        {/* Campaign Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Campaign Selection
+            </CardTitle>
+            <CardDescription>
+              Select an APT campaign to simulate its lifecycle phases
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Label htmlFor="campaign">Active Campaign</Label>
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger id="campaign">
+                  <SelectValue placeholder="Select a campaign..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.length === 0 ? (
+                    <SelectItem value="none" disabled>No campaigns available</SelectItem>
+                  ) : (
+                    campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{campaign.name}</span>
+                          {campaign.target_organization && (
+                            <span className="text-xs text-muted-foreground">
+                              ({campaign.target_organization})
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {selectedCampaign && campaigns.find(c => c.id === selectedCampaign) && (
+                <div className="p-3 bg-muted rounded-lg text-sm">
+                  <p className="font-medium mb-1">
+                    {campaigns.find(c => c.id === selectedCampaign)?.name}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {campaigns.find(c => c.id === selectedCampaign)?.description || 'No description available'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Legal & Educational Notice */}
         <Alert>

@@ -235,24 +235,126 @@ const ScanDetails = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
+            {/* Vulnerabilities Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  Identified Vulnerabilities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {scan.results?.vulnerabilities && Array.isArray(scan.results.vulnerabilities) && scan.results.vulnerabilities.length > 0 ? (
+                  <div className="space-y-4">
+                    {scan.results.vulnerabilities.map((vuln: any, idx: number) => (
+                      <div key={idx} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold text-lg">{vuln.name || vuln.title || `Vulnerability #${idx + 1}`}</h4>
+                            {vuln.cve && (
+                              <Badge variant="destructive" className="font-mono">
+                                {vuln.cve}
+                              </Badge>
+                            )}
+                          </div>
+                          {vuln.severity && (
+                            <Badge className={`${getThreatBadgeColor(vuln.severity.toLowerCase())} text-white`}>
+                              {vuln.severity}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {vuln.description && (
+                          <p className="text-sm text-muted-foreground">{vuln.description}</p>
+                        )}
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          {vuln.cvss_score && (
+                            <div>
+                              <span className="font-medium">CVSS Score:</span>
+                              <p className="text-muted-foreground">{vuln.cvss_score}</p>
+                            </div>
+                          )}
+                          {vuln.exploitability && (
+                            <div>
+                              <span className="font-medium">Exploitability:</span>
+                              <p className="text-muted-foreground capitalize">{vuln.exploitability}</p>
+                            </div>
+                          )}
+                          {vuln.port && (
+                            <div>
+                              <span className="font-medium">Port:</span>
+                              <p className="text-muted-foreground">{vuln.port}</p>
+                            </div>
+                          )}
+                          {vuln.service && (
+                            <div>
+                              <span className="font-medium">Service:</span>
+                              <p className="text-muted-foreground">{vuln.service}</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {vuln.mitigation && (
+                          <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 rounded border border-green-200 dark:border-green-900">
+                            <p className="text-sm font-medium text-green-800 dark:text-green-400 mb-1">
+                              Recommended Mitigation:
+                            </p>
+                            <p className="text-sm text-green-700 dark:text-green-300">{vuln.mitigation}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : scan.results?.open_ports ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      No structured vulnerability data available. Showing open ports and services:
+                    </p>
+                    {Array.isArray(scan.results.open_ports) && scan.results.open_ports.map((port: any, idx: number) => (
+                      <div key={idx} className="border rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                          <span className="font-medium">Port {port.port || port}</span>
+                          {port.service && (
+                            <span className="text-muted-foreground ml-2">- {port.service}</span>
+                          )}
+                        </div>
+                        {port.version && (
+                          <Badge variant="outline">{port.version}</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No vulnerabilities identified in this scan</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Security Assessment */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  Security Assessment
+                  Security Assessment Details
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {scan.results && typeof scan.results === 'object' ? (
                   <div className="space-y-4">
-                    {Object.entries(scan.results).map(([key, value]) => (
-                      <div key={key} className="border-l-4 border-primary pl-4">
-                        <h4 className="font-medium capitalize">{key.replace(/_/g, ' ')}</h4>
-                        <pre className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
-                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                        </pre>
-                      </div>
-                    ))}
+                    {Object.entries(scan.results)
+                      .filter(([key]) => key !== 'vulnerabilities') // Hide vulnerabilities as we show them above
+                      .map(([key, value]) => (
+                        <div key={key} className="border-l-4 border-primary pl-4">
+                          <h4 className="font-medium capitalize">{key.replace(/_/g, ' ')}</h4>
+                          <pre className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                            {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                          </pre>
+                        </div>
+                      ))}
                   </div>
                 ) : (
                   <p className="text-muted-foreground">No detailed results available</p>
