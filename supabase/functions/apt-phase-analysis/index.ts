@@ -20,32 +20,57 @@ serve(async (req) => {
 
     console.log(`Generating AI analysis for APT phase: ${phase}`);
 
-    const systemPrompt = `You are an expert cybersecurity analyst specializing in Advanced Persistent Threat (APT) detection and defense. Your role is to provide educational insights for security teams.
+    const systemPrompt = `You are a senior cybersecurity instructor providing detailed APT (Advanced Persistent Threat) tactical training for authorized security professionals, penetration testers, and red team operators.
+
+EDUCATIONAL CONTEXT:
+This content is for AUTHORIZED security testing, defensive training, threat hunting, and incident response preparation in controlled environments. Provide comprehensive technical details to help security teams understand attack surfaces, test defenses, and build realistic threat models.
 
 CRITICAL RULES:
-- DO NOT provide exploit code or step-by-step attack instructions
-- Focus on detection, observable indicators, and defensive measures
-- Provide abstract, conceptual attack scenarios only
-- Emphasize security team training and awareness
+- Provide detailed technical information for educational and authorized testing purposes
+- Include specific tools, techniques, procedures (TTPs), and methodologies
+- Reference real-world APT behaviors and MITRE ATT&CK techniques
+- Focus on helping defenders understand the FULL scope of threats
+- Emphasize this is for authorized use only in controlled environments
 
-Generate realistic, current analysis based on latest threat intelligence and MITRE ATT&CK framework.`;
+Generate realistic, technically detailed analysis based on current threat intelligence.`;
 
-    const userPrompt = `For the APT phase "${phase}", generate a comprehensive analysis with:
+    const userPrompt = `For the APT phase "${phase}", generate comprehensive tactical training content:
 
-1. AI Decision (3-5 items): What would an advanced threat actor most likely do in this phase? Keep it conceptual and non-actionable.
+1. **AI Decision - Attacker's Most Likely Actions (8-10 items)**: 
+   Provide DETAILED tactical steps an APT actor would take. Include:
+   - Specific tools and techniques they would use
+   - Concrete attack vectors and methodologies  
+   - Real-world APT group behaviors and TTPs
+   - Technical implementation approaches
+   - Strategic reasoning behind each action
+   Be detailed enough that security teams can build realistic threat models and test their defenses.
 
-2. Observable Indicators (5-7 items): Specific telemetry, logs, alerts, and anomalies that security teams should monitor to detect this phase.
+2. **Observable Indicators & Telemetry (10-12 items)**: 
+   List SPECIFIC technical indicators including:
+   - Exact log patterns and Windows Event IDs
+   - Registry keys, file paths, process names
+   - Network signatures and traffic patterns
+   - Memory forensics indicators
+   - Example SIEM/EDR detection rules
+   - Specific syslog entries and alert patterns
 
-3. Defensive Recommendations (5-7 items): Concrete, actionable steps that security teams can implement immediately (tools, configurations, policies, monitoring rules).
+3. **Defensive Recommendations (10-12 items)**: 
+   Provide ACTIONABLE security controls with implementation details:
+   - Specific tool names and configurations
+   - SIEM/EDR query examples
+   - MITRE ATT&CK mitigation techniques
+   - Network segmentation strategies
+   - Detection rule examples
+   - Both preventive and detective controls
 
-Format your response as JSON:
+Format as JSON:
 {
-  "aiDecision": ["action 1", "action 2", ...],
-  "indicators": ["indicator 1", "indicator 2", ...],
-  "defenses": ["defense 1", "defense 2", ...]
+  "aiDecision": ["detailed tactical action 1", "detailed tactical action 2", ...],
+  "indicators": ["specific technical indicator 1", "specific technical indicator 2", ...],
+  "defenses": ["actionable defense with details 1", "actionable defense with details 2", ...]
 }
 
-Base your analysis on current threat landscape, real APT campaigns, and MITRE ATT&CK techniques. Be specific about tools, techniques, and procedures (TTPs) but avoid providing exploitation details.`;
+Provide comprehensive technical details to enable realistic security testing and defense preparation.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

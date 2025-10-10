@@ -15,7 +15,7 @@ interface ReportExporterProps {
 }
 
 interface ReportConfig {
-  format: 'pdf' | 'html' | 'markdown';
+  format: 'pdf';
   includeExecutiveSummary: boolean;
   includeTechnicalFindings: boolean;
   includeTimeline: boolean;
@@ -54,18 +54,12 @@ export const ReportExporter: React.FC<ReportExporterProps> = ({
       // Build report content
       const reportContent = buildReportContent(stats);
       
-      // Export based on format
-      if (config.format === 'pdf') {
-        downloadAsPDF(reportContent);
-      } else if (config.format === 'html') {
-        downloadAsHTML(reportContent);
-      } else {
-        downloadAsMarkdown(reportContent);
-      }
+      // Export as PDF (via browser print)
+      downloadAsPDF(reportContent);
 
       toast({
         title: "Report Generated",
-        description: `${config.format.toUpperCase()} report has been downloaded`
+        description: "PDF report ready for download"
       });
     } catch (error) {
       console.error('Error generating report:', error);
@@ -272,17 +266,8 @@ This assessment addresses requirements from the following frameworks:
     return content;
   };
 
-  const downloadAsMarkdown = (content: string) => {
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${campaign.name}_report_${Date.now()}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadAsHTML = (content: string) => {
+  const downloadAsPDF = (content: string) => {
+    // Generate HTML for print-to-PDF
     const html = `
 <!DOCTYPE html>
 <html>
@@ -290,40 +275,122 @@ This assessment addresses requirements from the following frameworks:
   <meta charset="UTF-8">
   <title>${campaign.name} - Penetration Test Report</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; line-height: 1.6; }
-    h1 { color: #dc2626; border-bottom: 3px solid #dc2626; padding-bottom: 10px; }
-    h2 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-top: 30px; }
-    h3 { color: #059669; margin-top: 20px; }
-    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
-    pre { background: #1f2937; color: #f3f4f6; padding: 15px; border-radius: 8px; overflow-x: auto; }
-    .critical { color: #dc2626; font-weight: bold; }
-    .high { color: #ea580c; font-weight: bold; }
-    .medium { color: #ca8a04; font-weight: bold; }
-    .low { color: #16a34a; font-weight: bold; }
+    @media print {
+      body { margin: 0; }
+      .page-break { page-break-before: always; }
+    }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 40px; 
+      line-height: 1.8; 
+      color: #1f2937;
+    }
+    h1 { 
+      color: #dc2626; 
+      border-bottom: 4px solid #dc2626; 
+      padding-bottom: 15px; 
+      font-size: 32px;
+      margin-top: 0;
+    }
+    h2 { 
+      color: #2563eb; 
+      border-bottom: 2px solid #2563eb; 
+      padding-bottom: 10px; 
+      margin-top: 40px; 
+      font-size: 24px;
+    }
+    h3 { 
+      color: #059669; 
+      margin-top: 25px; 
+      font-size: 18px;
+    }
+    code { 
+      background: #f3f4f6; 
+      padding: 3px 8px; 
+      border-radius: 4px; 
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    pre { 
+      background: #1f2937; 
+      color: #f3f4f6; 
+      padding: 20px; 
+      border-radius: 8px; 
+      overflow-x: auto; 
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .critical { color: #dc2626; font-weight: bold; text-transform: uppercase; }
+    .high { color: #ea580c; font-weight: bold; text-transform: uppercase; }
+    .medium { color: #ca8a04; font-weight: bold; text-transform: uppercase; }
+    .low { color: #16a34a; font-weight: bold; text-transform: uppercase; }
+    ul, ol { margin: 15px 0; padding-left: 30px; }
+    li { margin: 8px 0; }
+    strong { color: #374151; }
+    .header { 
+      text-align: center; 
+      margin-bottom: 50px; 
+      padding: 30px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border-radius: 10px;
+    }
+    .header h1 { color: white; border: none; }
+    .footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
-${content.replace(/\n/g, '<br>').replace(/```([^`]+)```/g, '<pre>$1</pre>')}
+  <div class="header">
+    <h1>🔐 Penetration Test Report</h1>
+    <p style="font-size: 18px; margin: 10px 0;">Campaign: ${campaign.name}</p>
+    <p style="font-size: 14px; opacity: 0.9;">Generated: ${new Date().toLocaleString()}</p>
+  </div>
+${content
+  .split('\n')
+  .map(line => {
+    if (line.startsWith('# ')) return `<h1>${line.substring(2)}</h1>`;
+    if (line.startsWith('## ')) return `<h2>${line.substring(3)}</h2>`;
+    if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
+    if (line.startsWith('- ')) return `<li>${line.substring(2)}</li>`;
+    if (line.trim().startsWith('```')) return line.includes('```') && line.indexOf('```') !== line.lastIndexOf('```') ? `<pre>${line.replace(/```/g, '')}</pre>` : '<pre>';
+    if (line.includes('**') && line.split('**').length > 2) {
+      return `<p>${line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
+    }
+    if (line.trim() === '---') return '<hr class="page-break" style="margin: 40px 0; border: none; border-top: 2px dashed #e5e7eb;">';
+    return line.trim() ? `<p>${line}</p>` : '<br>';
+  })
+  .join('\n')}
+  <div class="footer">
+    <p><strong>CONFIDENTIAL</strong> - This report contains sensitive security information</p>
+    <p>Generated by APT Security Assessment Platform</p>
+  </div>
 </body>
 </html>
     `;
     
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${campaign.name}_report_${Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadAsPDF = (content: string) => {
-    // For PDF generation, we'll first generate HTML and suggest browser print-to-PDF
-    downloadAsHTML(content);
-    toast({
-      title: "PDF Generation",
-      description: "HTML file generated. Use your browser's Print to PDF feature for PDF output.",
-    });
+    // Open in new window for print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Wait for content to load, then trigger print dialog
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 250);
+      };
+    }
   };
 
   const toggleCompliance = (framework: string) => {
@@ -373,16 +440,13 @@ ${content.replace(/\n/g, '<br>').replace(/```([^`]+)```/g, '<pre>$1</pre>')}
         <div className="space-y-4">
           <div>
             <Label>Report Format</Label>
-            <Select value={config.format} onValueChange={(value: any) => setConfig({...config, format: value})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pdf">PDF (via Print)</SelectItem>
-                <SelectItem value="html">HTML</SelectItem>
-                <SelectItem value="markdown">Markdown</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
+              <FileText className="h-4 w-4" />
+              <span className="font-medium">PDF Format Only</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Report will open in a new window. Use your browser's Print dialog to save as PDF.
+            </p>
           </div>
 
           <div className="space-y-2">

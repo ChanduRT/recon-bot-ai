@@ -185,11 +185,12 @@ export const APTPhaseSimulation = ({ currentPhaseIndex }: APTPhaseSimulationProp
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Alert className="mb-4">
-                <AlertTriangle className="h-4 w-4" />
+              <Alert className="mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <AlertDescription>
-                  <strong>Educational Purpose Only:</strong> These are AI-generated conceptual descriptions for defensive training. 
-                  No exploit code or step-by-step instructions provided.
+                  <strong>Educational & Authorized Testing Only:</strong> This detailed tactical information is provided for defensive security training, 
+                  authorized penetration testing, red team exercises, and security research in controlled environments. 
+                  Unauthorized use of these techniques against systems you don't own or have explicit permission to test is illegal.
                 </AlertDescription>
               </Alert>
               
