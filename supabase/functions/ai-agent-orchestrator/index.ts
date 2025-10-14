@@ -309,15 +309,34 @@ serve(async (req) => {
     
     const avgRiskScore = totalRiskScore / Math.max(results.filter(r => !r.error).length, 1);
     
+    // Detailed threat level calculation with logging
+    const threatFactors = {
+      highSeverityCount: highSeverityVulns,
+      totalVulnerabilities: allVulnerabilities.length,
+      avgRiskScore: avgRiskScore.toFixed(2),
+      findingsCount: allFindings.length,
+      openPortsCount: openPorts.length,
+      hasRecentThreats: !!perplexityData
+    };
+    
     if (highSeverityVulns >= 3 || avgRiskScore >= 8) {
       threatLevel = 'critical';
+      console.log('🔴 CRITICAL threat level assigned:', threatFactors);
     } else if (highSeverityVulns >= 1 || avgRiskScore >= 6) {
       threatLevel = 'high';
+      console.log('🟠 HIGH threat level assigned:', threatFactors);
     } else if (allVulnerabilities.length >= 3 || avgRiskScore >= 4) {
       threatLevel = 'medium';
+      console.log('🟡 MEDIUM threat level assigned:', threatFactors);
+    } else {
+      console.log('🟢 LOW threat level assigned:', threatFactors);
     }
     
-    console.log('Threat assessment:', { threatLevel, vulnerabilities: allVulnerabilities.length, avgRiskScore });
+    console.log('Threat assessment complete:', { 
+      threatLevel, 
+      ...threatFactors,
+      calculationReason: `Risk score: ${avgRiskScore.toFixed(1)}/10, CVEs: ${allVulnerabilities.length}, High severity: ${highSeverityVulns}, Findings: ${allFindings.length}`
+    });
 
     // Update scan with final results
     await supabase

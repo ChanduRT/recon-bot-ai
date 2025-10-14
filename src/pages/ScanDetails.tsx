@@ -235,6 +235,101 @@ const ScanDetails = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
+            {/* Risk Assessment Summary - Show First */}
+            <Card className="border-l-4" style={{ borderLeftColor: scan.threat_level === 'critical' ? '#ef4444' : scan.threat_level === 'high' ? '#f97316' : scan.threat_level === 'medium' ? '#eab308' : '#22c55e' }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Risk Assessment Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">Overall Risk Score</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {scan.results?.risk_score ? scan.results.risk_score.toFixed(1) : 'N/A'}/10
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">Threat Level</p>
+                    <Badge className={`text-white mt-2 text-lg px-4 py-1 ${getThreatBadgeColor(scan.threat_level)}`}>
+                      {scan.threat_level.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">CVE Vulnerabilities</p>
+                    <p className="text-3xl font-bold mt-1">
+                      {scan.results?.vulnerabilities?.length || 0}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Risk Factors - Show why it's marked as high risk */}
+                {scan.threat_level !== 'low' && (
+                  <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
+                    <h4 className="font-semibold text-orange-800 dark:text-orange-400 mb-2">
+                      Risk Factors Contributing to {scan.threat_level.toUpperCase()} Threat Level:
+                    </h4>
+                    <ul className="space-y-2 text-sm text-orange-700 dark:text-orange-300">
+                      {scan.results?.risk_score >= 6 && (
+                        <li className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>AI agents detected a high risk score of {scan.results.risk_score.toFixed(1)}/10 based on security analysis</span>
+                        </li>
+                      )}
+                      {scan.results?.vulnerabilities?.length > 0 && (
+                        <li className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{scan.results.vulnerabilities.length} specific vulnerabilities identified with CVE references</span>
+                        </li>
+                      )}
+                      {scan.results?.findings?.length > 0 && (
+                        <li className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{scan.results.findings.length} security concerns and potential attack vectors detected</span>
+                        </li>
+                      )}
+                      {scan.results?.open_ports?.length > 0 && (
+                        <li className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{scan.results.open_ports.length} open ports discovered, expanding attack surface</span>
+                        </li>
+                      )}
+                      {scan.results?.recent_threat_intelligence && (
+                        <li className="flex items-start gap-2">
+                          <Activity className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>Recent threat intelligence indicates potential vulnerabilities in this target</span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Security Findings from AI Analysis */}
+            {scan.results?.findings && Array.isArray(scan.results.findings) && scan.results.findings.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="w-5 h-5" />
+                    AI-Detected Security Concerns
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {scan.results.findings.map((finding: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-orange-500" />
+                        <span className="text-sm">{finding}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Recent Threat Intelligence from Perplexity */}
             {scan.results?.recent_threat_intelligence && (
               <Card>
@@ -262,7 +357,7 @@ const ScanDetails = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-orange-500" />
-                  Identified Vulnerabilities
+                  Specific CVE Vulnerabilities
                 </CardTitle>
               </CardHeader>
               <CardContent>
