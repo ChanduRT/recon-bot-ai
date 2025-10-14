@@ -101,6 +101,56 @@ serve(async (req) => {
       console.error('Reconnaissance error:', error);
     }
 
+    // Gather recent vulnerability data from Perplexity
+    console.log('Gathering recent vulnerability data from Perplexity for:', target);
+    let perplexityData: any = null;
+    
+    try {
+      const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+      
+      if (perplexityApiKey) {
+        const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${perplexityApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-sonar-small-128k-online',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a cybersecurity expert. Provide recent vulnerability information about the given target. Be precise and concise. Focus on CVEs, exploits, and security advisories from the last 6 months.'
+              },
+              {
+                role: 'user',
+                content: `Find recent vulnerabilities, CVEs, security advisories, and exploit information for: ${target}. Include any known security issues, patches, and threat intelligence.`
+              }
+            ],
+            temperature: 0.2,
+            top_p: 0.9,
+            max_tokens: 1000,
+            search_recency_filter: 'month'
+          }),
+        });
+
+        if (perplexityResponse.ok) {
+          const perplexityResult = await perplexityResponse.json();
+          perplexityData = {
+            recent_vulnerabilities: perplexityResult.choices[0].message.content,
+            timestamp: new Date().toISOString()
+          };
+          console.log('Perplexity data gathered:', perplexityData);
+        } else {
+          console.warn('Perplexity API call failed:', await perplexityResponse.text());
+        }
+      } else {
+        console.warn('Perplexity API key not configured');
+      }
+    } catch (error) {
+      console.error('Perplexity error:', error);
+    }
+
     // Execute agents in parallel with reconnaissance data
     const agentPromises = agents?.map(async (agent) => {
       const startTime = Date.now();
@@ -122,8 +172,14 @@ serve(async (req) => {
         // Prepare AI prompt with reconnaissance data
         let prompt = agent.prompt_template.replace('{target}', target);
         
-        // Enhance prompt with real reconnaissance findings
-        const reconContext = `\n\nREAL RECONNAISSANCE DATA:\n${JSON.stringify(reconData, null, 2)}\n\nAnalyze this data and identify specific vulnerabilities.`;
+        // Enhance prompt with real reconnaissance findings and recent vulnerability data
+        let reconContext = `\n\nREAL RECONNAISSANCE DATA:\n${JSON.stringify(reconData, null, 2)}`;
+        
+        if (perplexityData) {
+          reconContext += `\n\nRECENT VULNERABILITY INTELLIGENCE:\n${perplexityData.recent_vulnerabilities}`;
+        }
+        
+        reconContext += `\n\nAnalyze this data and identify specific vulnerabilities.`;
         
         // Call OpenAI
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -234,6 +290,7 @@ serve(async (req) => {
       services: services,
       risk_score: totalRiskScore / Math.max(results.filter(r => !r.error).length, 1),
       reconnaissance_data: reconData,
+      recent_threat_intelligence: perplexityData,
       agents: results,
       summary: {
         total_agents: results.length,

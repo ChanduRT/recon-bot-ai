@@ -235,6 +235,28 @@ const ScanDetails = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
+            {/* Recent Threat Intelligence from Perplexity */}
+            {scan.results?.recent_threat_intelligence && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Recent Threat Intelligence
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none">
+                    <p className="whitespace-pre-wrap text-sm">
+                      {scan.results.recent_threat_intelligence.recent_vulnerabilities}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Data gathered: {new Date(scan.results.recent_threat_intelligence.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Vulnerabilities Section */}
             <Card>
               <CardHeader>
