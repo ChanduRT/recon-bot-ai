@@ -74,7 +74,34 @@ serve(async (req) => {
       agents = agents?.filter(agent => agentIds.includes(agent.id)) || [];
     }
 
-    // Execute agents in parallel
+    // First, gather real reconnaissance data
+    console.log('Gathering reconnaissance data for:', target);
+    let reconData: any = { target };
+    
+    try {
+      const reconResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/reconnaissance`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target,
+          services: ['shodan', 'virustotal', 'ipinfo']
+        }),
+      });
+
+      if (reconResponse.ok) {
+        reconData = await reconResponse.json();
+        console.log('Reconnaissance data gathered:', reconData);
+      } else {
+        console.warn('Reconnaissance failed, continuing with limited data');
+      }
+    } catch (error) {
+      console.error('Reconnaissance error:', error);
+    }
+
+    // Execute agents in parallel with reconnaissance data
     const agentPromises = agents?.map(async (agent) => {
       const startTime = Date.now();
       
@@ -92,8 +119,11 @@ serve(async (req) => {
           .select()
           .single();
 
-        // Prepare AI prompt
-        const prompt = agent.prompt_template.replace('{target}', target);
+        // Prepare AI prompt with reconnaissance data
+        let prompt = agent.prompt_template.replace('{target}', target);
+        
+        // Enhance prompt with real reconnaissance findings
+        const reconContext = `\n\nREAL RECONNAISSANCE DATA:\n${JSON.stringify(reconData, null, 2)}\n\nAnalyze this data and identify specific vulnerabilities.`;
         
         // Call OpenAI
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -105,8 +135,11 @@ serve(async (req) => {
           body: JSON.stringify({
             model: 'gpt-4o-mini',
             messages: [
-              { role: 'system', content: 'You are a cybersecurity expert. Provide detailed, accurate analysis in JSON format.' },
-              { role: 'user', content: prompt }
+              { 
+                role: 'system', 
+                content: 'You are a cybersecurity expert. Analyze reconnaissance data and identify vulnerabilities. Return JSON with: {vulnerabilities: [{name, cve, severity, description, cvss_score, exploitability, port, service, mitigation}], findings: string[], risk_score: number}'
+              },
+              { role: 'user', content: prompt + reconContext }
             ],
             temperature: 0.7,
             max_tokens: 2000
@@ -168,31 +201,66 @@ serve(async (req) => {
     // Wait for all agents to complete
     const results = await Promise.all(agentPromises);
 
+    // Aggregate vulnerabilities from all agents
+    const allVulnerabilities: any[] = [];
+    const allFindings: string[] = [];
+    let totalRiskScore = 0;
+
+    results.forEach(r => {
+      if (r.result && !r.error) {
+        if (r.result.vulnerabilities && Array.isArray(r.result.vulnerabilities)) {
+          allVulnerabilities.push(...r.result.vulnerabilities);
+        }
+        if (r.result.findings && Array.isArray(r.result.findings)) {
+          allFindings.push(...r.result.findings);
+        }
+        if (r.result.risk_score) {
+          totalRiskScore += r.result.risk_score;
+        }
+      }
+    });
+
+    // Extract open ports from Shodan data
+    const openPorts = reconData.results?.shodan?.ports || [];
+    const services = reconData.results?.shodan?.services || [];
+
     // Aggregate results and determine threat level
     const aggregatedResults = {
       target,
       asset_type: assetType,
+      vulnerabilities: allVulnerabilities,
+      findings: allFindings,
+      open_ports: openPorts,
+      services: services,
+      risk_score: totalRiskScore / Math.max(results.filter(r => !r.error).length, 1),
+      reconnaissance_data: reconData,
       agents: results,
       summary: {
         total_agents: results.length,
         successful: results.filter(r => !r.error).length,
         failed: results.filter(r => r.error).length,
+        total_vulnerabilities: allVulnerabilities.length,
         total_execution_time: results.reduce((sum, r) => sum + r.execution_time_ms, 0)
       }
     };
 
-    // Determine threat level based on results
+    // Determine threat level based on vulnerabilities and risk score
     let threatLevel = 'low';
-    const hasHighRiskIndicators = results.some(r => 
-      r.result && (
-        JSON.stringify(r.result).includes('malicious') ||
-        JSON.stringify(r.result).includes('suspicious') ||
-        JSON.stringify(r.result).includes('high risk')
-      )
-    );
+    const highSeverityVulns = allVulnerabilities.filter(v => 
+      v.severity === 'critical' || v.severity === 'high'
+    ).length;
     
-    if (hasHighRiskIndicators) threatLevel = 'high';
-    else if (results.some(r => r.result && JSON.stringify(r.result).includes('medium'))) threatLevel = 'medium';
+    const avgRiskScore = totalRiskScore / Math.max(results.filter(r => !r.error).length, 1);
+    
+    if (highSeverityVulns >= 3 || avgRiskScore >= 8) {
+      threatLevel = 'critical';
+    } else if (highSeverityVulns >= 1 || avgRiskScore >= 6) {
+      threatLevel = 'high';
+    } else if (allVulnerabilities.length >= 3 || avgRiskScore >= 4) {
+      threatLevel = 'medium';
+    }
+    
+    console.log('Threat assessment:', { threatLevel, vulnerabilities: allVulnerabilities.length, avgRiskScore });
 
     // Update scan with final results
     await supabase
