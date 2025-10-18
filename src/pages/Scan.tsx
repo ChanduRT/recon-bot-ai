@@ -35,6 +35,7 @@ const Scan = () => {
   const [agents, setAgents] = useState<AIAgent[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatus, setScanStatus] = useState<string>("");
   const [scanResults, setScanResults] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -120,6 +121,7 @@ const Scan = () => {
 
     setLoading(true);
     setScanProgress(0);
+    setScanStatus("Initializing scan...");
     setScanResults(null);
 
     try {
@@ -138,13 +140,21 @@ const Scan = () => {
         return;
       }
 
-      // Simulate progress updates
+      // Simulate progress updates with status messages
+      let currentProgress = 0;
       const progressInterval = setInterval(() => {
-        setScanProgress(prev => {
-          const next = prev + 10;
-          return next >= 90 ? 90 : next;
-        });
-      }, 500);
+        currentProgress += 8;
+        if (currentProgress <= 25) {
+          setScanStatus("🔍 Gathering reconnaissance data from Shodan, VirusTotal, and IPInfo...");
+        } else if (currentProgress <= 45) {
+          setScanStatus("🌐 Searching for recent vulnerabilities with Perplexity AI...");
+        } else if (currentProgress <= 75) {
+          setScanStatus("🤖 AI agents analyzing security posture and identifying threats...");
+        } else if (currentProgress <= 90) {
+          setScanStatus("📊 Aggregating results and calculating threat level...");
+        }
+        setScanProgress(Math.min(currentProgress, 90));
+      }, 800);
 
       // Start the scan
       const { data: scanResult, error: scanError } = await supabase.functions
@@ -158,6 +168,7 @@ const Scan = () => {
 
       clearInterval(progressInterval);
       setScanProgress(100);
+      setScanStatus("✅ Scan complete!");
 
       if (scanError) {
         throw scanError;
@@ -330,15 +341,53 @@ const Scan = () => {
         {loading && (
           <Card>
             <CardContent className="pt-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Scan Progress</span>
-                  <span>{scanProgress}%</span>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Scan Progress</span>
+                    <span className="text-muted-foreground">{scanProgress}%</span>
+                  </div>
+                  <Progress value={scanProgress} className="w-full" />
                 </div>
-                <Progress value={scanProgress} className="w-full" />
-                <p className="text-xs text-muted-foreground text-center">
-                  AI agents are analyzing your target...
-                </p>
+                
+                {/* Real-time Status */}
+                <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                  <div className="flex items-start gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium mb-1">Current Status</p>
+                      <p className="text-sm text-muted-foreground">{scanStatus}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stage Indicators */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className={`p-3 rounded-lg border text-center transition-colors ${
+                    scanProgress > 0 ? 'border-primary bg-primary/10' : 'border-border'
+                  }`}>
+                    <Search className={`w-4 h-4 mx-auto mb-1 ${scanProgress > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-xs font-medium">Reconnaissance</p>
+                  </div>
+                  <div className={`p-3 rounded-lg border text-center transition-colors ${
+                    scanProgress > 25 ? 'border-primary bg-primary/10' : 'border-border'
+                  }`}>
+                    <AlertTriangle className={`w-4 h-4 mx-auto mb-1 ${scanProgress > 25 ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-xs font-medium">Perplexity</p>
+                  </div>
+                  <div className={`p-3 rounded-lg border text-center transition-colors ${
+                    scanProgress > 45 ? 'border-primary bg-primary/10' : 'border-border'
+                  }`}>
+                    <Brain className={`w-4 h-4 mx-auto mb-1 ${scanProgress > 45 ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-xs font-medium">AI Analysis</p>
+                  </div>
+                  <div className={`p-3 rounded-lg border text-center transition-colors ${
+                    scanProgress > 75 ? 'border-primary bg-primary/10' : 'border-border'
+                  }`}>
+                    <Shield className={`w-4 h-4 mx-auto mb-1 ${scanProgress > 75 ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-xs font-medium">Results</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
