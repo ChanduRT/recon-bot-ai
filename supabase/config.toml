@@ -3,6 +3,9 @@ project_id = "lwyjfbiehindtuwuvkto"
 [functions.ai-agent-orchestrator]
 verify_jwt = false
 
+[functions.neuromorphic-planner]
+verify_jwt = false
+
 [functions.ai-attack-planner]
 verify_jwt = false
 

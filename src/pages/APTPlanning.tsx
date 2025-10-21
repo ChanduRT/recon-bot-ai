@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, GraduationCap, Target } from "lucide-react";
+import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, GraduationCap, Target, Brain } from "lucide-react";
 import { APTLifecycleTimeline } from "@/components/APTLifecycleTimeline";
 import { APTPhaseSimulation } from "@/components/APTPhaseSimulation";
+import { NeuromorphicPlanner } from "@/components/NeuromorphicPlanner";
 
 const APTPlanning = () => {
   const [user, setUser] = useState(null);
@@ -273,14 +275,41 @@ const APTPlanning = () => {
           </CardContent>
         </Card>
 
-        {/* Timeline */}
-        <APTLifecycleTimeline
-          currentPhaseIndex={currentPhaseIndex}
-          onPhaseClick={handlePhaseClick}
-        />
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="simulation" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="simulation" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Standard Simulation
+            </TabsTrigger>
+            <TabsTrigger value="neuromorphic" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              Neuromorphic Planning
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Phase Details */}
-        <APTPhaseSimulation currentPhaseIndex={currentPhaseIndex} />
+          <TabsContent value="simulation" className="space-y-6">
+            {/* Timeline */}
+            <APTLifecycleTimeline
+              currentPhaseIndex={currentPhaseIndex}
+              onPhaseClick={handlePhaseClick}
+            />
+
+            {/* Phase Details */}
+            <APTPhaseSimulation currentPhaseIndex={currentPhaseIndex} />
+          </TabsContent>
+
+          <TabsContent value="neuromorphic" className="space-y-6">
+            <NeuromorphicPlanner
+              scenario={{
+                topology: ["web-server", "database", "internal-network", "employee-workstations"],
+                assets: ["customer-data", "financial-records", "intellectual-property", "credentials"],
+                vulnerabilities: ["unpatched-systems", "weak-passwords", "misconfigured-firewall", "outdated-software"],
+                constraints: ["minimize-detection", "maintain-persistence", "data-exfiltration"]
+              }}
+            />
+          </TabsContent>
+        </Tabs>
 
         {/* Additional Resources */}
         <Card>
