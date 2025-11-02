@@ -12,6 +12,9 @@ import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, G
 import { APTLifecycleTimeline } from "@/components/APTLifecycleTimeline";
 import { APTPhaseSimulation } from "@/components/APTPhaseSimulation";
 import { NeuromorphicPlanner } from "@/components/NeuromorphicPlanner";
+import NetworkTopology3D from "@/components/NetworkTopology3D";
+import InteractiveTimeline from "@/components/InteractiveTimeline";
+import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 
 const APTPlanning = () => {
   const [user, setUser] = useState(null);
@@ -277,7 +280,7 @@ const APTPlanning = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="simulation" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="simulation" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Standard Simulation
@@ -285,6 +288,14 @@ const APTPlanning = () => {
             <TabsTrigger value="neuromorphic" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               Neuromorphic Planning
+            </TabsTrigger>
+            <TabsTrigger value="visualizations" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              3D & Timeline
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -308,6 +319,15 @@ const APTPlanning = () => {
                 constraints: ["minimize-detection", "maintain-persistence", "data-exfiltration"]
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="visualizations" className="space-y-6">
+            <NetworkTopology3D phase={currentPhaseIndex} />
+            <InteractiveTimeline currentPhase={currentPhaseIndex} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <AnalyticsDashboard currentPhase={currentPhaseIndex} />
           </TabsContent>
         </Tabs>
 

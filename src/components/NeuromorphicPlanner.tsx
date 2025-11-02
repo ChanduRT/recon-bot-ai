@@ -326,8 +326,12 @@ export const NeuromorphicPlanner = ({ scenario }: NeuromorphicPlannerProps) => {
                         {results.visualization.inputSpikes.map((spike: any, i: number) => (
                           <div
                             key={i}
-                            className="bg-primary/70 w-2 rounded-t transition-all hover:bg-primary"
-                            style={{ height: `${spike.amplitude * 100}%` }}
+                            className="bg-primary/70 w-2 rounded-t transition-all hover:bg-primary animate-pulse"
+                            style={{ 
+                              height: `${spike.amplitude * 100}%`,
+                              animationDelay: `${i * 0.05}s`,
+                              animationDuration: '1.5s'
+                            }}
                             title={`Neuron ${spike.neuronId} @ t=${spike.time.toFixed(1)}`}
                           />
                         ))}
@@ -345,9 +349,13 @@ export const NeuromorphicPlanner = ({ scenario }: NeuromorphicPlannerProps) => {
                       {results.visualization.hiddenActivations.map((activation: any) => (
                         <div
                           key={activation.neuronId}
-                          className={`h-12 rounded flex items-center justify-center text-xs font-mono ${
-                            activation.fired ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                          className={`h-12 rounded flex items-center justify-center text-xs font-mono transition-all duration-500 ${
+                            activation.fired ? 'bg-primary text-primary-foreground animate-pulse' : 'bg-muted'
                           }`}
+                          style={{
+                            transform: activation.fired ? 'scale(1.1)' : 'scale(1)',
+                            boxShadow: activation.fired ? '0 0 15px rgba(155, 135, 245, 0.5)' : 'none'
+                          }}
                           title={`N${activation.neuronId}: ${activation.activation.toFixed(3)}`}
                         >
                           {activation.neuronId}
@@ -366,10 +374,27 @@ export const NeuromorphicPlanner = ({ scenario }: NeuromorphicPlannerProps) => {
                       {results.visualization.outputDecisions.map((decision: any) => (
                         <div key={decision.actionId} className="space-y-1">
                           <div className="flex items-center justify-between text-sm">
-                            <span>{decision.category}</span>
-                            <span className="font-mono text-xs">{(decision.score * 100).toFixed(1)}%</span>
+                            <span className="font-semibold">{decision.category}</span>
+                            <span className="font-mono text-xs font-bold">{(decision.score * 100).toFixed(1)}%</span>
                           </div>
-                          <Progress value={decision.score * 100} className="h-1.5" />
+                          <div className="h-2 bg-muted rounded-full overflow-hidden relative">
+                            <div
+                              className="h-full rounded-full transition-all duration-1000 relative overflow-hidden"
+                              style={{ 
+                                width: `${decision.score * 100}%`,
+                                background: decision.score > 0.7 
+                                  ? 'linear-gradient(90deg, hsl(var(--primary)), hsl(262 83% 85%))' 
+                                  : 'hsl(var(--primary))',
+                              }}
+                            >
+                              <div 
+                                className="absolute inset-0 animate-shimmer"
+                                style={{
+                                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
