@@ -16,8 +16,10 @@ import {
   Activity,
   Shield,
   FileText,
-  Download
+  Download,
+  Bug
 } from "lucide-react";
+import VulnerabilityAssessment from "@/components/VulnerabilityAssessment";
 
 interface ScanDetails {
   id: string;
@@ -230,6 +232,10 @@ const ScanDetails = () => {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="vulnerabilities">
+              <Bug className="w-4 h-4 mr-2" />
+              Vulnerabilities
+            </TabsTrigger>
             <TabsTrigger value="agents">AI Analysis</TabsTrigger>
             <TabsTrigger value="raw">Raw Data</TabsTrigger>
           </TabsList>
@@ -478,6 +484,10 @@ const ScanDetails = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="vulnerabilities" className="space-y-4">
+            <VulnerabilityAssessment scanResults={scan.results} target={scan.target} />
           </TabsContent>
 
           <TabsContent value="agents" className="space-y-4">

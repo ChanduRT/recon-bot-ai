@@ -12,6 +12,7 @@ import Tools from "./pages/Tools";
 import ScanDetails from "./pages/ScanDetails";
 import Settings from "./pages/Settings";
 import APTPlanning from "./pages/APTPlanning";
+import SOCDashboard from "./pages/SOCDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/tools" element={<Tools />} />
           <Route path="/network-tools" element={<NetworkTools />} />
           <Route path="/apt-planning" element={<APTPlanning />} />
+          <Route path="/soc-dashboard" element={<SOCDashboard />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

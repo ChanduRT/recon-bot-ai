@@ -8,7 +8,8 @@ import {
   Target,
   Terminal,
   History,
-  Users
+  Users,
+  Radar
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -26,6 +27,7 @@ import {
 
 const mainNavItems = [
   { title: "Dashboard", url: "/", icon: Activity },
+  { title: "SOC Dashboard", url: "/soc-dashboard", icon: Radar },
   { title: "New Scan", url: "/scan", icon: Search },
   { title: "Scan History", url: "/history", icon: History },
   { title: "APT Planning", url: "/apt-planning", icon: Target },
