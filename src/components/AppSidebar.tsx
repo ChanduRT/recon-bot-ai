@@ -5,10 +5,7 @@ import {
   Activity, 
   Database, 
   Settings, 
-  Brain,
-  BarChart3,
   Target,
-  AlertTriangle,
   Terminal,
   History,
   Users
@@ -31,12 +28,6 @@ const mainNavItems = [
   { title: "Dashboard", url: "/", icon: Activity },
   { title: "New Scan", url: "/scan", icon: Search },
   { title: "Scan History", url: "/history", icon: History },
-  { title: "Threat Intelligence", url: "/threat-intel", icon: AlertTriangle },
-];
-
-const agentItems = [
-  { title: "AI Agents", url: "/agents", icon: Brain },
-  { title: "Agent Analytics", url: "/agent-analytics", icon: BarChart3 },
   { title: "APT Planning", url: "/apt-planning", icon: Target },
 ];
 
@@ -77,30 +68,6 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end={item.url === "/"} className={getNavCls}>
-                      <item.icon className={`h-4 w-4 ${collapsed ? 'mx-auto' : 'mr-2'}`} />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* AI Agents */}
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              {!collapsed && <span>AI Agents</span>}
-            </div>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {agentItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavCls}>
                       <item.icon className={`h-4 w-4 ${collapsed ? 'mx-auto' : 'mr-2'}`} />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>

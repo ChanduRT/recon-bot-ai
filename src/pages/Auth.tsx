@@ -109,7 +109,7 @@ const Auth = () => {
               <Shield className="w-6 h-6 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Intel Web Hound
+              Aegis360X
             </h1>
           </div>
           <p className="text-muted-foreground">

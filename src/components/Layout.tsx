@@ -49,10 +49,10 @@ export function Layout({ children, user }: LayoutProps) {
                 <SidebarTrigger className="lg:hidden" />
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <span className="text-primary-foreground font-bold text-sm">IW</span>
+                    <span className="text-primary-foreground font-bold text-sm">A3</span>
                   </div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                    Intel Web Hound
+                    Aegis360X
                   </h1>
                 </div>
               </div>
