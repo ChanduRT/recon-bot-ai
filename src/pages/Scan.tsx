@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -17,7 +19,8 @@ import {
   Search, 
   AlertTriangle,
   CheckCircle,
-  Loader2
+  Loader2,
+  ExternalLink
 } from "lucide-react";
 
 interface AIAgent {
@@ -26,6 +29,22 @@ interface AIAgent {
   agent_type: string;
   description: string;
   is_active: boolean;
+}
+
+interface DemoTarget {
+  id: string;
+  name: string;
+  target_value: string;
+  target_type: string;
+  category: string;
+  source_provider: string;
+  description: string | null;
+  vulnerabilities: string[];
+  usage_notes: string | null;
+  documentation_url: string | null;
+  is_live_target: boolean;
+  legal_disclaimer: string | null;
+  tags: string[];
 }
 
 const Scan = () => {
@@ -37,11 +56,14 @@ const Scan = () => {
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState<string>("");
   const [scanResults, setScanResults] = useState<any>(null);
+  const [demoTargets, setDemoTargets] = useState<DemoTarget[]>([]);
+  const [selectedDemoTarget, setSelectedDemoTarget] = useState<DemoTarget | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchAgents();
+    fetchDemoTargets();
   }, []);
 
   const fetchAgents = async () => {
@@ -63,6 +85,44 @@ const Scan = () => {
         description: "Failed to load AI agents",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchDemoTargets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('demo_targets')
+        .select('*')
+        .eq('is_active', true)
+        .order('category');
+
+      if (error) throw error;
+      setDemoTargets(data || []);
+    } catch (error) {
+      console.error('Error fetching demo targets:', error);
+    }
+  };
+
+  const handleDemoTargetSelect = (targetId: string) => {
+    if (targetId === "custom") {
+      setSelectedDemoTarget(null);
+      setTarget("");
+      return;
+    }
+    
+    const demo = demoTargets.find(t => t.id === targetId);
+    if (demo) {
+      setTarget(demo.target_value);
+      // Map target_type to assetType
+      const typeMap: { [key: string]: 'domain' | 'ip' | 'url' | 'hash' | 'email' } = {
+        'domain': 'domain',
+        'ip': 'ip',
+        'url': 'url',
+        'hash': 'hash',
+        'email': 'email'
+      };
+      setAssetType(typeMap[demo.target_type] || 'domain');
+      setSelectedDemoTarget(demo);
     }
   };
 
@@ -226,6 +286,110 @@ const Scan = () => {
           </p>
         </div>
 
+        {/* Demo Targets Card */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Demo Targets (Legal & Safe)
+            </CardTitle>
+            <CardDescription>
+              Pre-configured intentionally vulnerable targets for testing and training
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Select onValueChange={handleDemoTargetSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a demo target or enter custom..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">
+                  <span className="text-muted-foreground">Enter custom target...</span>
+                </SelectItem>
+                <SelectGroup>
+                  <SelectLabel>Acunetix Vulnweb</SelectLabel>
+                  {demoTargets.filter(t => t.category === 'acunetix_demo').map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{t.name}</span>
+                        <span className="text-xs text-muted-foreground">({t.target_value})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>CTF Platforms</SelectLabel>
+                  {demoTargets.filter(t => t.category === 'ctf_platform').map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{t.name}</span>
+                        <span className="text-xs text-muted-foreground">({t.target_value})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel>Reference Lists (Not Scannable)</SelectLabel>
+                  {demoTargets.filter(t => t.category === 'reference_list' || t.category === 'ip_reputation').map(t => (
+                    <SelectItem key={t.id} value={t.id} disabled={!t.is_live_target}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{t.name}</span>
+                        {!t.is_live_target && <Badge variant="outline" className="text-xs">Reference Only</Badge>}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            {/* Selected Demo Target Info */}
+            {selectedDemoTarget && (
+              <Alert className="border-primary/20">
+                <Target className="h-4 w-4" />
+                <AlertDescription className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{selectedDemoTarget.name}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{selectedDemoTarget.source_provider}</Badge>
+                      {selectedDemoTarget.is_live_target ? (
+                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Safe to Scan</Badge>
+                      ) : (
+                        <Badge variant="destructive">Reference Only</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm">{selectedDemoTarget.description}</p>
+                  {selectedDemoTarget.vulnerabilities?.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-xs text-muted-foreground">Known vulnerabilities:</span>
+                      {selectedDemoTarget.vulnerabilities.map((vuln, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{vuln}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {selectedDemoTarget.usage_notes && (
+                    <p className="text-xs text-muted-foreground italic">{selectedDemoTarget.usage_notes}</p>
+                  )}
+                  {selectedDemoTarget.legal_disclaimer && (
+                    <p className="text-xs text-destructive">{selectedDemoTarget.legal_disclaimer}</p>
+                  )}
+                  {selectedDemoTarget.documentation_url && (
+                    <a 
+                      href={selectedDemoTarget.documentation_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary flex items-center gap-1 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      View Documentation
+                    </a>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Scan Configuration */}
         <Card>
           <CardHeader>
@@ -242,9 +406,20 @@ const Scan = () => {
                 id="target"
                 placeholder="Enter domain, IP, URL, hash, or email"
                 value={target}
-                onChange={(e) => setTarget(e.target.value)}
+                onChange={(e) => {
+                  setTarget(e.target.value);
+                  // Clear selected demo if manually editing
+                  if (selectedDemoTarget && e.target.value !== selectedDemoTarget.target_value) {
+                    setSelectedDemoTarget(null);
+                  }
+                }}
                 className="text-lg"
               />
+              {selectedDemoTarget && (
+                <p className="text-xs text-muted-foreground">
+                  Using demo target: {selectedDemoTarget.name}
+                </p>
+              )}
             </div>
 
             {/* Asset Type Selection */}
