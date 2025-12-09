@@ -242,6 +242,69 @@ export type Database = {
         }
         Relationships: []
       }
+      demo_targets: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          documentation_url: string | null
+          id: string
+          is_active: boolean | null
+          is_live_target: boolean | null
+          legal_disclaimer: string | null
+          metadata: Json | null
+          name: string
+          requires_authentication: boolean | null
+          source_provider: string
+          tags: string[] | null
+          target_type: string
+          target_value: string
+          updated_at: string | null
+          usage_notes: string | null
+          vulnerabilities: string[] | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_live_target?: boolean | null
+          legal_disclaimer?: string | null
+          metadata?: Json | null
+          name: string
+          requires_authentication?: boolean | null
+          source_provider: string
+          tags?: string[] | null
+          target_type: string
+          target_value: string
+          updated_at?: string | null
+          usage_notes?: string | null
+          vulnerabilities?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          documentation_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_live_target?: boolean | null
+          legal_disclaimer?: string | null
+          metadata?: Json | null
+          name?: string
+          requires_authentication?: boolean | null
+          source_provider?: string
+          tags?: string[] | null
+          target_type?: string
+          target_value?: string
+          updated_at?: string | null
+          usage_notes?: string | null
+          vulnerabilities?: string[] | null
+        }
+        Relationships: []
+      }
       mitre_mappings: {
         Row: {
           automated: boolean | null

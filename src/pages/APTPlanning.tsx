@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Play, Pause, SkipBack, SkipForward, RotateCcw, AlertTriangle, GraduationCap, Target, Brain } from "lucide-react";
 import { APTLifecycleTimeline } from "@/components/APTLifecycleTimeline";
@@ -16,6 +17,20 @@ import NetworkTopology3D from "@/components/NetworkTopology3D";
 import InteractiveTimeline from "@/components/InteractiveTimeline";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
 
+interface DemoTarget {
+  id: string;
+  name: string;
+  target_value: string;
+  target_type: string;
+  category: string;
+  source_provider: string;
+  description: string | null;
+  vulnerabilities: string[];
+  usage_notes: string | null;
+  is_live_target: boolean;
+  tags: string[];
+}
+
 const APTPlanning = () => {
   const [user, setUser] = useState(null);
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
@@ -23,6 +38,8 @@ const APTPlanning = () => {
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [demoTargets, setDemoTargets] = useState<DemoTarget[]>([]);
+  const [selectedDemoTarget, setSelectedDemoTarget] = useState<DemoTarget | null>(null);
   const { toast } = useToast();
 
   const totalPhases = 8;
@@ -46,8 +63,32 @@ const APTPlanning = () => {
       setLoading(false);
     });
 
+    // Fetch demo targets (public, no auth needed)
+    fetchDemoTargets();
+
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchDemoTargets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('demo_targets')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_live_target', true)
+        .order('category');
+
+      if (error) throw error;
+      setDemoTargets(data || []);
+    } catch (error) {
+      console.error('Error fetching demo targets:', error);
+    }
+  };
+
+  const handleDemoTargetSelect = (targetId: string) => {
+    const demo = demoTargets.find(t => t.id === targetId);
+    setSelectedDemoTarget(demo || null);
+  };
 
   const fetchCampaigns = async () => {
     try {
@@ -158,56 +199,127 @@ const APTPlanning = () => {
           <Shield className="h-12 w-12 text-muted-foreground opacity-20" />
         </div>
 
-        {/* Campaign Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Campaign Selection
-            </CardTitle>
-            <CardDescription>
-              Select an APT campaign to simulate its lifecycle phases
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Label htmlFor="campaign">Active Campaign</Label>
-              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                <SelectTrigger id="campaign">
-                  <SelectValue placeholder="Select a campaign..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.length === 0 ? (
-                    <SelectItem value="none" disabled>No campaigns available</SelectItem>
-                  ) : (
-                    campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{campaign.name}</span>
-                          {campaign.target_organization && (
-                            <span className="text-xs text-muted-foreground">
-                              ({campaign.target_organization})
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {selectedCampaign && campaigns.find(c => c.id === selectedCampaign) && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <p className="font-medium mb-1">
-                    {campaigns.find(c => c.id === selectedCampaign)?.name}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {campaigns.find(c => c.id === selectedCampaign)?.description || 'No description available'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Campaign & Target Selection */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Campaign Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Campaign Selection
+              </CardTitle>
+              <CardDescription>
+                Select an APT campaign to simulate its lifecycle phases
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label htmlFor="campaign">Active Campaign</Label>
+                <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                  <SelectTrigger id="campaign">
+                    <SelectValue placeholder="Select a campaign..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {campaigns.length === 0 ? (
+                      <SelectItem value="none" disabled>No campaigns available</SelectItem>
+                    ) : (
+                      campaigns.map((campaign) => (
+                        <SelectItem key={campaign.id} value={campaign.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{campaign.name}</span>
+                            {campaign.target_organization && (
+                              <span className="text-xs text-muted-foreground">
+                                ({campaign.target_organization})
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedCampaign && campaigns.find(c => c.id === selectedCampaign) && (
+                  <div className="p-3 bg-muted rounded-lg text-sm">
+                    <p className="font-medium mb-1">
+                      {campaigns.find(c => c.id === selectedCampaign)?.name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {campaigns.find(c => c.id === selectedCampaign)?.description || 'No description available'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Demo Target Selection */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Demo Target
+              </CardTitle>
+              <CardDescription>
+                Select a pre-configured vulnerable target for simulation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Label htmlFor="demo-target">Target Environment</Label>
+                <Select onValueChange={handleDemoTargetSelect}>
+                  <SelectTrigger id="demo-target">
+                    <SelectValue placeholder="Select a demo target..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {demoTargets.filter(t => t.category === 'acunetix_demo').length > 0 && (
+                      <>
+                        <SelectItem value="header-acunetix" disabled className="font-semibold text-xs text-muted-foreground">
+                          Acunetix Vulnweb
+                        </SelectItem>
+                        {demoTargets.filter(t => t.category === 'acunetix_demo').map(t => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} ({t.target_value})
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {demoTargets.filter(t => t.category === 'ctf_platform').length > 0 && (
+                      <>
+                        <SelectItem value="header-ctf" disabled className="font-semibold text-xs text-muted-foreground">
+                          CTF Platforms
+                        </SelectItem>
+                        {demoTargets.filter(t => t.category === 'ctf_platform').map(t => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedDemoTarget && (
+                  <div className="p-3 bg-background rounded-lg text-sm border border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium">{selectedDemoTarget.name}</p>
+                      <Badge variant="secondary">{selectedDemoTarget.source_provider}</Badge>
+                    </div>
+                    <p className="text-muted-foreground text-xs mb-2">{selectedDemoTarget.description}</p>
+                    {selectedDemoTarget.vulnerabilities?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedDemoTarget.vulnerabilities.slice(0, 4).map((v, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">{v}</Badge>
+                        ))}
+                        {selectedDemoTarget.vulnerabilities.length > 4 && (
+                          <Badge variant="outline" className="text-xs">+{selectedDemoTarget.vulnerabilities.length - 4} more</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Legal & Educational Notice */}
         <Alert>
@@ -313,9 +425,13 @@ const APTPlanning = () => {
           <TabsContent value="neuromorphic" className="space-y-6">
             <NeuromorphicPlanner
               scenario={{
-                topology: ["web-server", "database", "internal-network", "employee-workstations"],
+                topology: selectedDemoTarget 
+                  ? [selectedDemoTarget.target_value, "database", "internal-network", "employee-workstations"]
+                  : ["web-server", "database", "internal-network", "employee-workstations"],
                 assets: ["customer-data", "financial-records", "intellectual-property", "credentials"],
-                vulnerabilities: ["unpatched-systems", "weak-passwords", "misconfigured-firewall", "outdated-software"],
+                vulnerabilities: selectedDemoTarget?.vulnerabilities?.length 
+                  ? selectedDemoTarget.vulnerabilities.slice(0, 4)
+                  : ["unpatched-systems", "weak-passwords", "misconfigured-firewall", "outdated-software"],
                 constraints: ["minimize-detection", "maintain-persistence", "data-exfiltration"]
               }}
             />
