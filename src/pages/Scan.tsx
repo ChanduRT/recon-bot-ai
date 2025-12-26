@@ -570,69 +570,242 @@ const Scan = () => {
 
         {/* Results */}
         {scanResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                Scan Results
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">{scanResults.results?.target}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Scanned with {scanResults.results?.summary?.total_agents} agents
-                  </p>
+          <div className="space-y-4">
+            {/* Summary Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  Scan Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">{scanResults.results?.target}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Scanned with {scanResults.results?.summary?.total_agents} agents
+                    </p>
+                  </div>
+                  <Badge className={`${getThreatLevelColor(scanResults.threat_level)} text-white`}>
+                    {scanResults.threat_level} Risk
+                  </Badge>
                 </div>
-                <Badge className={`${getThreatLevelColor(scanResults.threat_level)} text-white`}>
-                  {scanResults.threat_level} Risk
-                </Badge>
-              </div>
 
-              <div className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Successful Agents:</span>
-                  <span className="text-green-600">
-                    {scanResults.results?.summary?.successful}
-                  </span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="text-2xl font-bold">{scanResults.results?.risk_score?.toFixed(1) || 'N/A'}</p>
+                    <p className="text-xs text-muted-foreground">Risk Score</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="text-2xl font-bold text-red-500">
+                      {scanResults.results?.vulnerabilities?.filter((v: any) => v.severity === 'High' || v.severity === 'Critical').length || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">High Risk</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="text-2xl font-bold text-yellow-500">
+                      {scanResults.results?.vulnerabilities?.filter((v: any) => v.severity === 'Medium').length || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Medium Risk</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted rounded-lg">
+                    <p className="text-2xl font-bold text-green-500">
+                      {scanResults.results?.vulnerabilities?.filter((v: any) => v.severity === 'Low').length || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Low Risk</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Failed Agents:</span>
-                  <span className="text-red-600">
-                    {scanResults.results?.summary?.failed}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Execution Time:</span>
-                  <span>
-                    {scanResults.results?.summary?.total_execution_time}ms
-                  </span>
-                </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/history`)}
-                >
-                  View Full Report
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setTarget("");
-                    setScanResults(null);
-                    setScanProgress(0);
-                  }}
-                >
-                  New Scan
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            {/* High Risk Vulnerabilities */}
+            {scanResults.results?.vulnerabilities?.filter((v: any) => v.severity === 'High' || v.severity === 'Critical').length > 0 && (
+              <Card className="border-red-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-500">
+                    <AlertTriangle className="w-5 h-5" />
+                    High-Risk Vulnerabilities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-medium">IP Address</th>
+                          <th className="text-left p-2 font-medium">Port</th>
+                          <th className="text-left p-2 font-medium">Service</th>
+                          <th className="text-left p-2 font-medium">Risk</th>
+                          <th className="text-left p-2 font-medium">CVE / Vulnerability</th>
+                          <th className="text-left p-2 font-medium">CVSS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scanResults.results.vulnerabilities
+                          .filter((v: any) => v.severity === 'High' || v.severity === 'Critical')
+                          .map((vuln: any, idx: number) => (
+                            <tr key={idx} className="border-b hover:bg-muted/50">
+                              <td className="p-2 font-mono text-xs">{vuln.ip || scanResults.results?.target}</td>
+                              <td className="p-2">{vuln.port || '-'}</td>
+                              <td className="p-2">{vuln.service || '-'}</td>
+                              <td className="p-2">
+                                <Badge className={`${vuln.severity === 'Critical' ? 'bg-red-600' : 'bg-orange-500'} text-white text-xs`}>
+                                  {vuln.severity}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                <div className="space-y-1">
+                                  {vuln.cve && <Badge variant="destructive" className="font-mono text-xs">{vuln.cve}</Badge>}
+                                  <p className="text-xs text-muted-foreground">{vuln.name || vuln.title}</p>
+                                </div>
+                              </td>
+                              <td className="p-2">
+                                <span className={`font-bold ${parseFloat(vuln.cvss_score) >= 7 ? 'text-red-500' : parseFloat(vuln.cvss_score) >= 4 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                  {vuln.cvss_score || '-'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Medium/Low Risk Vulnerabilities */}
+            {scanResults.results?.vulnerabilities?.filter((v: any) => v.severity === 'Medium' || v.severity === 'Low').length > 0 && (
+              <Card className="border-yellow-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-yellow-500">
+                    <Shield className="w-5 h-5" />
+                    Medium & Low Risk Vulnerabilities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-medium">IP Address</th>
+                          <th className="text-left p-2 font-medium">Port</th>
+                          <th className="text-left p-2 font-medium">Service</th>
+                          <th className="text-left p-2 font-medium">Risk</th>
+                          <th className="text-left p-2 font-medium">Vulnerability</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scanResults.results.vulnerabilities
+                          .filter((v: any) => v.severity === 'Medium' || v.severity === 'Low')
+                          .map((vuln: any, idx: number) => (
+                            <tr key={idx} className="border-b hover:bg-muted/50">
+                              <td className="p-2 font-mono text-xs">{vuln.ip || scanResults.results?.target}</td>
+                              <td className="p-2">{vuln.port || '-'}</td>
+                              <td className="p-2">{vuln.service || '-'}</td>
+                              <td className="p-2">
+                                <Badge className={`${vuln.severity === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'} text-white text-xs`}>
+                                  {vuln.severity}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                <p className="text-xs">{vuln.name || vuln.title}</p>
+                                <p className="text-xs text-muted-foreground">{vuln.description?.slice(0, 100)}...</p>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Vulnerability Details Accordion */}
+            {scanResults.results?.vulnerabilities?.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Vulnerability Details & Mitigations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {scanResults.results.vulnerabilities.slice(0, 5).map((vuln: any, idx: number) => (
+                      <div key={idx} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {vuln.cve && <Badge variant="destructive" className="font-mono">{vuln.cve}</Badge>}
+                              <h4 className="font-semibold">{vuln.name || vuln.title}</h4>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{vuln.description}</p>
+                          </div>
+                          <Badge className={`${getThreatLevelColor(vuln.severity?.toLowerCase())} text-white`}>
+                            {vuln.severity}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm bg-muted/50 rounded-lg p-3">
+                          <div>
+                            <span className="font-medium text-muted-foreground">IP:</span>
+                            <p className="font-mono">{vuln.ip || scanResults.results?.target}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Port:</span>
+                            <p>{vuln.port || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">CVSS:</span>
+                            <p className={`font-bold ${parseFloat(vuln.cvss_score) >= 7 ? 'text-red-500' : parseFloat(vuln.cvss_score) >= 4 ? 'text-yellow-500' : 'text-green-500'}`}>
+                              {vuln.cvss_score || 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Exploitability:</span>
+                            <p className="capitalize">{vuln.exploitability || 'Unknown'}</p>
+                          </div>
+                        </div>
+
+                        {vuln.mitigation && (
+                          <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">Recommended Mitigation:</p>
+                            <p className="text-sm text-green-700 dark:text-green-300">{vuln.mitigation}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Actions */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/history`)}
+                  >
+                    View Full Report
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTarget("");
+                      setScanResults(null);
+                      setScanProgress(0);
+                      setSelectedDemoTarget(null);
+                    }}
+                  >
+                    New Scan
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
