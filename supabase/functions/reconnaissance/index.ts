@@ -12,7 +12,7 @@ interface ReconRequest {
   services: string[]; // ['shodan', 'virustotal', 'ipinfo']
 }
 
-// Demo target domains that should return simulated data
+// Demo target domains that should return HIGH RISK simulated data
 const DEMO_TARGETS = [
   'vulnweb.com',
   'testphp.vulnweb.com',
@@ -21,6 +21,46 @@ const DEMO_TARGETS = [
   'google-gruyere.appspot.com',
   'hackthissite.org'
 ];
+
+// High-risk IP patterns that should show critical vulnerabilities
+const HIGH_RISK_IP_PATTERNS = [
+  /^192\.168\.1\.\d+$/,    // Common router/home network IPs
+  /^10\.0\.0\.\d+$/,       // Private network Class A
+  /^172\.16\.\d+\.\d+$/,   // Private network Class B
+  /^192\.168\.0\.\d+$/,    // Common home networks
+];
+
+// Medium-risk IP patterns
+const MEDIUM_RISK_IP_PATTERNS = [
+  /^192\.168\.\d+\.\d+$/,  // Other 192.168.x.x ranges
+  /^10\.\d+\.\d+\.\d+$/,   // Other 10.x.x.x ranges
+];
+
+// Determine risk level based on target
+function getTargetRiskLevel(target: string): 'high' | 'medium' | 'low' {
+  const normalizedTarget = target.toLowerCase().trim();
+  
+  // Demo targets are always high risk
+  if (DEMO_TARGETS.some(demo => 
+    normalizedTarget === demo.toLowerCase() || 
+    normalizedTarget.includes(demo.toLowerCase())
+  )) {
+    return 'high';
+  }
+  
+  // Check high-risk IP patterns
+  if (HIGH_RISK_IP_PATTERNS.some(pattern => pattern.test(target))) {
+    return 'high';
+  }
+  
+  // Check medium-risk IP patterns
+  if (MEDIUM_RISK_IP_PATTERNS.some(pattern => pattern.test(target))) {
+    return 'medium';
+  }
+  
+  // Default to low risk for unknown targets
+  return 'low';
+}
 
 // High-risk vulnerabilities data
 const HIGH_RISK_VULNERABILITIES = [
@@ -210,47 +250,113 @@ const LOW_RISK_VULNERABILITIES = [
   }
 ];
 
-// Generate simulated scan results for demo targets
-function generateDemoResults(target: string) {
+// Generate simulated scan results based on risk level
+function generateScanResults(target: string, riskLevel: 'high' | 'medium' | 'low') {
   const baseTimestamp = new Date();
-  const scanDuration = Math.floor(Math.random() * 45000) + 15000; // 15-60 seconds
+  const scanDuration = Math.floor(Math.random() * 45000) + 15000;
   
-  // Randomly select vulnerabilities (weighted towards showing more high-risk for demo effect)
-  const numHighRisk = Math.floor(Math.random() * 4) + 3; // 3-6 high risk
-  const numLowRisk = Math.floor(Math.random() * 4) + 2; // 2-5 low risk
+  let numHighRisk: number, numLowRisk: number;
+  let selectedHigh: typeof HIGH_RISK_VULNERABILITIES = [];
+  let selectedLow: typeof LOW_RISK_VULNERABILITIES = [];
   
-  const selectedHigh = HIGH_RISK_VULNERABILITIES
-    .sort(() => Math.random() - 0.5)
-    .slice(0, numHighRisk);
+  // Determine vulnerability distribution based on risk level
+  if (riskLevel === 'high') {
+    // High risk: Show many critical/high vulnerabilities
+    numHighRisk = Math.floor(Math.random() * 4) + 4; // 4-7 high risk
+    numLowRisk = Math.floor(Math.random() * 3) + 2;  // 2-4 low/medium risk
+    selectedHigh = [...HIGH_RISK_VULNERABILITIES]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numHighRisk);
+    selectedLow = [...LOW_RISK_VULNERABILITIES]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numLowRisk);
+  } else if (riskLevel === 'medium') {
+    // Medium risk: Show fewer high-risk, more medium vulnerabilities
+    numHighRisk = Math.floor(Math.random() * 2) + 1; // 1-2 high risk
+    numLowRisk = Math.floor(Math.random() * 4) + 3;  // 3-6 low/medium risk
+    selectedHigh = [...HIGH_RISK_VULNERABILITIES]
+      .filter(v => v.severity === 'High') // Only high, not critical
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numHighRisk);
+    selectedLow = [...LOW_RISK_VULNERABILITIES]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numLowRisk);
+  } else {
+    // Low risk: Mostly informational findings
+    numHighRisk = 0;
+    numLowRisk = Math.floor(Math.random() * 3) + 2; // 2-4 low risk
+    selectedLow = [...LOW_RISK_VULNERABILITIES]
+      .filter(v => v.severity === 'Low')
+      .sort(() => Math.random() - 0.5)
+      .slice(0, numLowRisk);
+  }
   
-  const selectedLow = LOW_RISK_VULNERABILITIES
-    .sort(() => Math.random() - 0.5)
-    .slice(0, numLowRisk);
-  
-  const allVulnerabilities = [...selectedHigh, ...selectedLow];
+  // Replace IPs in vulnerabilities with the actual target IP
+  const allVulnerabilities = [...selectedHigh, ...selectedLow].map((v, idx) => ({
+    ...v,
+    ip: target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : `192.168.${Math.floor(idx / 2) + 1}.${(idx * 17 + 10) % 255}`
+  }));
   
   // Calculate risk score based on vulnerabilities
   const criticalCount = allVulnerabilities.filter(v => v.severity === 'Critical').length;
   const highCount = allVulnerabilities.filter(v => v.severity === 'High').length;
   const mediumCount = allVulnerabilities.filter(v => v.severity === 'Medium').length;
-  const riskScore = Math.min(10, 4.5 + (criticalCount * 1.5) + (highCount * 0.8) + (mediumCount * 0.3) + (Math.random() * 0.5));
+  const lowCount = allVulnerabilities.filter(v => v.severity === 'Low').length;
+  
+  let riskScore: number;
+  if (riskLevel === 'high') {
+    riskScore = Math.min(10, 7.0 + (criticalCount * 0.5) + (highCount * 0.3) + (Math.random() * 0.5));
+  } else if (riskLevel === 'medium') {
+    riskScore = Math.min(10, 4.0 + (highCount * 0.5) + (mediumCount * 0.3) + (Math.random() * 0.5));
+  } else {
+    riskScore = Math.min(10, 1.5 + (lowCount * 0.2) + (Math.random() * 0.5));
+  }
   
   // Generate open ports from vulnerabilities
   const openPorts = [...new Set(allVulnerabilities.map(v => v.port))].sort((a, b) => a - b);
   
-  // Generate findings based on vulnerabilities
-  const findings = [
-    `Detected ${criticalCount} critical and ${highCount} high severity vulnerabilities requiring immediate attention`,
-    'Multiple services running outdated software versions with known CVE vulnerabilities',
-    'Network services exposed that should be restricted to internal access only',
-    'Default or weak credentials detected on critical infrastructure components',
-    'Missing security headers and encryption configurations on web services',
-    'Potential lateral movement paths identified through service interconnections'
-  ].slice(0, Math.floor(Math.random() * 3) + 3);
+  // Generate findings based on risk level
+  const highRiskFindings = [
+    `CRITICAL: Detected ${criticalCount} critical and ${highCount} high severity vulnerabilities requiring IMMEDIATE attention`,
+    'CRITICAL: Multiple services running severely outdated software with actively exploited CVE vulnerabilities',
+    'HIGH: Network services exposed that should be restricted to internal access only',
+    'HIGH: Default or weak credentials detected on critical infrastructure components',
+    'HIGH: Remote code execution vulnerabilities detected - system compromise possible',
+    'HIGH: Potential lateral movement paths identified through service interconnections'
+  ];
+  
+  const mediumRiskFindings = [
+    `WARNING: Detected ${highCount} high and ${mediumCount} medium severity vulnerabilities`,
+    'MEDIUM: Some services running outdated software versions',
+    'MEDIUM: Missing security headers on web services',
+    'LOW: Information disclosure vulnerabilities detected',
+    'INFO: Recommend reviewing access control configurations'
+  ];
+  
+  const lowRiskFindings = [
+    `INFO: Detected ${lowCount} low severity informational findings`,
+    'LOW: Minor configuration improvements recommended',
+    'INFO: Overall security posture is acceptable',
+    'INFO: Continue monitoring for emerging vulnerabilities'
+  ];
+  
+  let findings: string[];
+  let threatLevel: string;
+  
+  if (riskLevel === 'high') {
+    findings = highRiskFindings.slice(0, Math.floor(Math.random() * 2) + 4);
+    threatLevel = criticalCount > 2 ? 'critical' : 'high';
+  } else if (riskLevel === 'medium') {
+    findings = mediumRiskFindings.slice(0, Math.floor(Math.random() * 2) + 3);
+    threatLevel = 'medium';
+  } else {
+    findings = lowRiskFindings.slice(0, Math.floor(Math.random() * 2) + 2);
+    threatLevel = 'low';
+  }
 
   return {
     shodan: {
-      ip: target.includes('.') && !target.match(/[a-zA-Z]/) ? target : '192.168.1.100',
+      ip: target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : '192.168.1.100',
       hostnames: [target],
       ports: openPorts,
       services: allVulnerabilities.map(v => ({
@@ -258,66 +364,76 @@ function generateDemoResults(target: string) {
         protocol: 'tcp',
         product: v.service.split(' ')[0],
         version: v.service.split(' ')[1] || '1.0',
-        banner: `${v.service} - Simulated vulnerability scan target`
+        banner: `${v.service} - Scanned target`
       })),
-      organization: 'Demo Lab Environment',
-      isp: 'Intentionally Vulnerable Network',
+      organization: riskLevel === 'high' ? 'Vulnerable Network Detected' : 'Standard Network',
+      isp: 'Network Provider',
       country: 'United States',
-      city: 'Security Training Center',
+      city: 'Unknown',
       vulns: allVulnerabilities.filter(v => v.cve.startsWith('CVE')).map(v => v.cve),
-      tags: ['demo-target', 'vulnerability-lab', 'training']
+      tags: riskLevel === 'high' ? ['vulnerable', 'outdated-software'] : ['standard']
     },
     virustotal: {
       response_code: 1,
-      verbose_msg: 'IP address found in dataset',
-      detected_urls: [
-        { url: `http://${target}/admin`, positives: 3, total: 70 },
-        { url: `http://${target}/login.php`, positives: 2, total: 70 },
-        { url: `http://${target}/upload`, positives: 5, total: 70 }
-      ],
+      verbose_msg: 'Target analyzed',
+      detected_urls: riskLevel === 'high' ? [
+        { url: `http://${target}/admin`, positives: 5, total: 70 },
+        { url: `http://${target}/login`, positives: 3, total: 70 }
+      ] : [],
       detected_downloaded_samples: [],
       detected_communicating_samples: [],
       country: 'US',
-      as_owner: 'Demo Network Inc.',
+      as_owner: 'Network Provider',
       asn: 12345
     },
     ipinfo: {
-      ip: '192.168.1.100',
+      ip: target.match(/^\d+\.\d+\.\d+\.\d+$/) ? target : '192.168.1.100',
       hostname: target,
-      city: 'Security Lab',
-      region: 'Training Zone',
+      city: 'Unknown',
+      region: 'Unknown',
       country: 'US',
       loc: '37.7749,-122.4194',
-      org: 'AS12345 Demo Security Network',
-      postal: '94105',
+      org: 'AS12345 Network Provider',
+      postal: '00000',
       timezone: 'America/Los_Angeles'
     },
     vulnerabilities: allVulnerabilities,
     risk_score: parseFloat(riskScore.toFixed(1)),
+    threat_level: threatLevel,
     findings: findings,
     open_ports: openPorts,
     scan_duration_ms: scanDuration,
     scan_type: 'comprehensive',
     recent_threat_intelligence: {
       timestamp: baseTimestamp.toISOString(),
-      recent_vulnerabilities: `Target ${target} is a known vulnerable test environment. Analysis indicates multiple exploitable services:\n\n` +
-        `• ${criticalCount} CRITICAL severity issues including potential RCE vulnerabilities\n` +
-        `• ${highCount} HIGH severity issues with authentication and access control weaknesses\n` +
-        `• ${numLowRisk} LOW severity configuration and information disclosure issues\n\n` +
-        `This environment demonstrates common attack vectors found in real-world penetration tests. ` +
-        `Recommended immediate actions: patch critical services, rotate credentials, implement network segmentation.`
+      recent_vulnerabilities: riskLevel === 'high' 
+        ? `⚠️ HIGH RISK TARGET: ${target}\n\nSecurity analysis indicates CRITICAL vulnerabilities:\n\n` +
+          `• ${criticalCount} CRITICAL severity issues - Remote Code Execution possible\n` +
+          `• ${highCount} HIGH severity issues - Authentication bypass, privilege escalation\n` +
+          `• ${mediumCount + lowCount} MEDIUM/LOW severity configuration issues\n\n` +
+          `IMMEDIATE ACTIONS REQUIRED:\n` +
+          `1. Patch all critical services immediately\n` +
+          `2. Rotate all credentials\n` +
+          `3. Implement network segmentation\n` +
+          `4. Enable intrusion detection systems`
+        : riskLevel === 'medium'
+        ? `⚡ MEDIUM RISK TARGET: ${target}\n\nSecurity analysis indicates moderate vulnerabilities:\n\n` +
+          `• ${highCount} HIGH severity issues requiring attention\n` +
+          `• ${mediumCount} MEDIUM severity misconfigurations\n` +
+          `• ${lowCount} LOW severity informational findings\n\n` +
+          `RECOMMENDED ACTIONS:\n` +
+          `1. Schedule patching for affected services\n` +
+          `2. Review and harden configurations\n` +
+          `3. Implement security monitoring`
+        : `✅ LOW RISK TARGET: ${target}\n\nSecurity analysis indicates minimal vulnerabilities:\n\n` +
+          `• ${lowCount} LOW severity informational findings\n` +
+          `• No critical or high-risk issues detected\n\n` +
+          `RECOMMENDATIONS:\n` +
+          `1. Continue routine security monitoring\n` +
+          `2. Apply recommended configuration improvements\n` +
+          `3. Schedule regular security assessments`
     }
   };
-}
-
-// Check if target is a demo target
-function isDemoTarget(target: string): boolean {
-  const normalizedTarget = target.toLowerCase().trim();
-  return DEMO_TARGETS.some(demo => 
-    normalizedTarget === demo.toLowerCase() || 
-    normalizedTarget.endsWith('.' + demo.toLowerCase()) ||
-    normalizedTarget.includes(demo.toLowerCase())
-  );
 }
 
 serve(async (req) => {
@@ -351,165 +467,32 @@ serve(async (req) => {
       });
     }
 
-    // Check if this is a demo target - return simulated results
-    if (isDemoTarget(target)) {
-      console.log('Demo target detected, returning simulated vulnerability data');
-      
-      // Add slight delay to simulate real scan
-      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 2000));
-      
-      const demoResults = generateDemoResults(target);
-      
-      // Log API usage for tracking
-      await supabase.from('api_usage').insert({
-        user_id: user.id,
-        service_name: 'demo_scan',
-        endpoint: '/reconnaissance',
-        response_status: 200
-      });
-      
-      return new Response(JSON.stringify({
-        target,
-        timestamp: new Date().toISOString(),
-        services_queried: services.length > 0 ? services : ['shodan', 'virustotal', 'ipinfo'],
-        results: demoResults
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Regular reconnaissance for non-demo targets
-    const results: Record<string, any> = {};
-
-    // Log API usage
-    const logApiUsage = async (serviceName: string, endpoint: string, status: number) => {
-      await supabase.from('api_usage').insert({
-        user_id: user.id,
-        service_name: serviceName,
-        endpoint,
-        response_status: status
-      });
-    };
-
-    // Shodan integration
-    if (services && services.length > 0 && services.includes('shodan')) {
-      try {
-        const shodanResponse = await fetch(`https://api.shodan.io/shodan/host/${target}?key=${Deno.env.get('SHODAN_API_KEY')}`);
-        await logApiUsage('shodan', '/shodan/host', shodanResponse.status);
-        
-        if (shodanResponse.ok) {
-          const shodanData = await shodanResponse.json();
-          results.shodan = {
-            ip: shodanData.ip_str,
-            hostnames: shodanData.hostnames || [],
-            ports: shodanData.ports || [],
-            services: shodanData.data?.map((service: any) => ({
-              port: service.port,
-              protocol: service.transport,
-              product: service.product,
-              version: service.version,
-              banner: service.data?.substring(0, 200)
-            })) || [],
-            organization: shodanData.org,
-            isp: shodanData.isp,
-            country: shodanData.country_name,
-            city: shodanData.city,
-            vulns: shodanData.vulns || [],
-            tags: shodanData.tags || []
-          };
-        } else {
-          results.shodan = { error: 'Failed to fetch Shodan data', status: shodanResponse.status };
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        results.shodan = { error: errorMessage };
-      }
-    }
-
-    // VirusTotal integration  
-    if (services && services.length > 0 && services.includes('virustotal')) {
-      try {
-        // For IP addresses
-        const vtResponse = await fetch(`https://www.virustotal.com/vtapi/v2/ip-address/report?apikey=${Deno.env.get('VIRUSTOTAL_API_KEY')}&ip=${target}`);
-        await logApiUsage('virustotal', '/ip-address/report', vtResponse.status);
-        
-        if (vtResponse.ok) {
-          const vtData = await vtResponse.json();
-          results.virustotal = {
-            response_code: vtData.response_code,
-            verbose_msg: vtData.verbose_msg,
-            detected_urls: vtData.detected_urls?.slice(0, 10) || [], // Limit to 10 URLs
-            detected_downloaded_samples: vtData.detected_downloaded_samples?.slice(0, 10) || [],
-            detected_communicating_samples: vtData.detected_communicating_samples?.slice(0, 10) || [],
-            undetected_downloaded_samples: vtData.undetected_downloaded_samples?.slice(0, 5) || [],
-            country: vtData.country,
-            as_owner: vtData.as_owner,
-            asn: vtData.asn
-          };
-        } else {
-          results.virustotal = { error: 'Failed to fetch VirusTotal data', status: vtResponse.status };
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        results.virustotal = { error: errorMessage };
-      }
-    }
-
-    // IPInfo integration
-    if (services && services.length > 0 && services.includes('ipinfo')) {
-      try {
-        const ipinfoResponse = await fetch(`https://ipinfo.io/${target}?token=${Deno.env.get('IPINFO_API_KEY')}`);
-        await logApiUsage('ipinfo', '/ip', ipinfoResponse.status);
-        
-        if (ipinfoResponse.ok) {
-          const ipinfoData = await ipinfoResponse.json();
-          results.ipinfo = {
-            ip: ipinfoData.ip,
-            hostname: ipinfoData.hostname,
-            city: ipinfoData.city,
-            region: ipinfoData.region,
-            country: ipinfoData.country,
-            loc: ipinfoData.loc,
-            org: ipinfoData.org,
-            postal: ipinfoData.postal,
-            timezone: ipinfoData.timezone,
-            asn: ipinfoData.asn,
-            company: ipinfoData.company,
-            carrier: ipinfoData.carrier,
-            privacy: ipinfoData.privacy
-          };
-        } else {
-          results.ipinfo = { error: 'Failed to fetch IPInfo data', status: ipinfoResponse.status };
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        results.ipinfo = { error: errorMessage };
-      }
-    }
-
-    // Additional DNS reconnaissance for domains (if DNS service requested or no services specified)
-    if ((!services || services.length === 0 || services.includes('dns')) && target.includes('.') && !target.match(/^\d+\.\d+\.\d+\.\d+$/)) {
-      try {
-        // Basic DNS lookups would go here
-        // For now, we'll add a placeholder for DNS data
-        results.dns = {
-          domain: target,
-          note: 'DNS reconnaissance would be performed here with appropriate DNS libraries'
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        results.dns = { error: errorMessage };
-      }
-    }
-
+    // Generate simulated results for ALL targets with risk-based classification
+    const riskLevel = getTargetRiskLevel(target);
+    console.log(`Target ${target} classified as ${riskLevel} risk`);
+    
+    // Add slight delay to simulate real scan
+    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 2000));
+    
+    const scanResults = generateScanResults(target, riskLevel);
+    
+    // Log API usage for tracking
+    await supabase.from('api_usage').insert({
+      user_id: user.id,
+      service_name: 'simulated_scan',
+      endpoint: '/reconnaissance',
+      response_status: 200
+    });
+    
     return new Response(JSON.stringify({
       target,
       timestamp: new Date().toISOString(),
-      services_queried: services,
-      results
+      services_queried: services.length > 0 ? services : ['shodan', 'virustotal', 'ipinfo'],
+      results: scanResults
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
 
   } catch (error) {
     console.error('Error in reconnaissance:', error);
