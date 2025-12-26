@@ -28,96 +28,96 @@ const HIGH_RISK_VULNERABILITIES = [
     ip: '10.24.5.17',
     port: 22,
     service: 'OpenSSH 6.0',
-    severity: 'high',
+    severity: 'High',
     cve: 'CVE-2016-10009',
     name: 'OpenSSH Remote Code Execution',
     description: 'Outdated SSH version allows crafted requests to execute arbitrary commands on the remote system.',
-    cvss_score: 7.8,
-    exploitability: 'high',
+    cvss_score: '7.8',
+    exploitability: 'High',
     mitigation: 'Upgrade OpenSSH to version 7.4 or later. Implement key-based authentication only.'
   },
   {
     ip: '172.16.44.201',
     port: 445,
     service: 'SMBv1',
-    severity: 'critical',
+    severity: 'Critical',
     cve: 'CVE-2017-0144',
     name: 'EternalBlue SMB Remote Code Execution',
     description: 'SMBv1 enabled and vulnerable to remote code execution via specially crafted packets.',
-    cvss_score: 9.8,
-    exploitability: 'critical',
+    cvss_score: '9.8',
+    exploitability: 'Critical',
     mitigation: 'Disable SMBv1 immediately. Apply MS17-010 security patch. Block port 445 at perimeter.'
   },
   {
     ip: '192.168.50.77',
     port: 80,
     service: 'Apache 2.2.8',
-    severity: 'high',
+    severity: 'High',
     cve: 'CVE-2010-0740',
     name: 'Directory Traversal / Arbitrary File Access',
     description: 'Misconfigured Apache allows path traversal attacks enabling access to sensitive files outside web root.',
-    cvss_score: 7.5,
-    exploitability: 'high',
+    cvss_score: '7.5',
+    exploitability: 'High',
     mitigation: 'Update Apache to latest version. Configure proper directory permissions and disable directory listing.'
   },
   {
     ip: '10.0.3.110',
     port: 3306,
     service: 'MySQL 5.5',
-    severity: 'critical',
+    severity: 'Critical',
     cve: 'CWE-521',
     name: 'Weak Database Credentials (root:root)',
     description: 'Database server allows login using default/weak credentials enabling full database access.',
-    cvss_score: 9.1,
-    exploitability: 'critical',
+    cvss_score: '9.1',
+    exploitability: 'Critical',
     mitigation: 'Change default credentials immediately. Implement strong password policy and restrict network access.'
   },
   {
     ip: '192.168.200.14',
     port: 21,
     service: 'vsftpd 2.3.4',
-    severity: 'high',
+    severity: 'High',
     cve: 'CVE-2011-2523',
     name: 'Anonymous FTP Login Enabled',
     description: 'FTP server allows anonymous access enabling unauthorized data extraction and potential file upload.',
-    cvss_score: 7.3,
-    exploitability: 'high',
+    cvss_score: '7.3',
+    exploitability: 'High',
     mitigation: 'Disable anonymous FTP access. Implement SFTP instead of FTP for encrypted file transfers.'
   },
   {
     ip: '172.16.8.90',
     port: 23,
     service: 'Telnet',
-    severity: 'high',
+    severity: 'High',
     cve: 'CWE-319',
     name: 'Unencrypted Remote Access Protocol',
     description: 'Telnet transmits credentials in cleartext, easily intercepted via network sniffing attacks.',
-    cvss_score: 7.4,
-    exploitability: 'high',
+    cvss_score: '7.4',
+    exploitability: 'High',
     mitigation: 'Disable Telnet completely. Use SSH for all remote administration tasks.'
   },
   {
     ip: '10.11.12.40',
     port: 8080,
     service: 'Apache Tomcat 7.0.23',
-    severity: 'critical',
+    severity: 'Critical',
     cve: 'CVE-2017-12617',
     name: 'Tomcat Manager Unrestricted Access',
     description: 'Tomcat manager interface exposed without authentication allowing WAR file deployment and remote code execution.',
-    cvss_score: 9.8,
-    exploitability: 'critical',
+    cvss_score: '9.8',
+    exploitability: 'Critical',
     mitigation: 'Restrict manager interface access. Implement strong authentication. Remove default applications.'
   },
   {
     ip: '192.168.77.99',
     port: 3389,
     service: 'Microsoft RDP',
-    severity: 'critical',
+    severity: 'Critical',
     cve: 'CVE-2019-0708',
     name: 'BlueKeep Remote Desktop Vulnerability',
     description: 'Remote Desktop Protocol vulnerable to pre-authentication remote code execution without user interaction.',
-    cvss_score: 9.8,
-    exploitability: 'critical',
+    cvss_score: '9.8',
+    exploitability: 'Critical',
     mitigation: 'Apply Microsoft security update KB4499175. Enable Network Level Authentication. Consider VPN-only RDP access.'
   }
 ];
@@ -128,84 +128,84 @@ const LOW_RISK_VULNERABILITIES = [
     ip: '10.24.5.17',
     port: 80,
     service: 'Apache 2.4.57',
-    severity: 'low',
+    severity: 'Low',
     cve: 'CWE-200',
     name: 'Server Banner Information Disclosure',
     description: 'Web server leaks version information in HTTP headers aiding reconnaissance.',
-    cvss_score: 3.1,
-    exploitability: 'low',
+    cvss_score: '3.1',
+    exploitability: 'Low',
     mitigation: 'Configure ServerTokens Prod and ServerSignature Off in Apache configuration.'
   },
   {
     ip: '172.16.44.201',
     port: 53,
     service: 'BIND 9.11',
-    severity: 'low',
+    severity: 'Low',
     cve: 'CWE-16',
     name: 'DNS Zone Transfer Restriction Warning',
     description: 'DNS zone transfers properly restricted but configuration could be hardened further.',
-    cvss_score: 2.5,
-    exploitability: 'low',
+    cvss_score: '2.5',
+    exploitability: 'Low',
     mitigation: 'Verify allow-transfer directives. Implement TSIG for zone transfers between authorized servers.'
   },
   {
     ip: '192.168.50.77',
     port: 443,
     service: 'TLS 1.2',
-    severity: 'low',
+    severity: 'Low',
     cve: 'CWE-693',
     name: 'Missing HTTP Strict Transport Security Header',
     description: 'HSTS header not configured potentially allowing protocol downgrade attacks.',
-    cvss_score: 3.7,
-    exploitability: 'low',
+    cvss_score: '3.7',
+    exploitability: 'Low',
     mitigation: 'Add Strict-Transport-Security header with appropriate max-age and includeSubDomains directive.'
   },
   {
     ip: '10.0.3.110',
     port: 8081,
     service: 'Node.js Express API',
-    severity: 'low',
+    severity: 'Medium',
     cve: 'CWE-209',
     name: 'Verbose Error Message Exposure',
     description: 'API returns detailed stack traces in error responses aiding attacker reconnaissance.',
-    cvss_score: 3.3,
-    exploitability: 'low',
+    cvss_score: '4.3',
+    exploitability: 'Medium',
     mitigation: 'Implement production error handling that logs details internally but returns generic messages to clients.'
   },
   {
     ip: '192.168.200.14',
     port: 111,
     service: 'rpcbind',
-    severity: 'low',
+    severity: 'Medium',
     cve: 'CWE-200',
     name: 'RPC Portmapper Service Enumeration',
     description: 'RPC portmapper allows enumeration of available services on the host.',
-    cvss_score: 2.9,
-    exploitability: 'low',
+    cvss_score: '4.9',
+    exploitability: 'Medium',
     mitigation: 'Restrict rpcbind access via firewall. Consider disabling if RPC services not required.'
   },
   {
     ip: '172.16.8.90',
     port: 53,
     service: 'DNS',
-    severity: 'low',
+    severity: 'Low',
     cve: 'CWE-757',
     name: 'DNSSEC Not Implemented',
     description: 'DNS responses not cryptographically signed allowing potential cache poisoning.',
-    cvss_score: 3.1,
-    exploitability: 'low',
+    cvss_score: '3.1',
+    exploitability: 'Low',
     mitigation: 'Implement DNSSEC signing for authoritative zones. Enable DNSSEC validation for resolvers.'
   },
   {
     ip: '10.11.12.40',
     port: 25,
     service: 'Postfix SMTP',
-    severity: 'low',
+    severity: 'Low',
     cve: 'CWE-200',
     name: 'SMTP VRFY Command Enabled',
     description: 'SMTP VRFY command allows enumeration of valid email addresses on the system.',
-    cvss_score: 2.6,
-    exploitability: 'low',
+    cvss_score: '2.6',
+    exploitability: 'Low',
     mitigation: 'Disable VRFY command in SMTP configuration. Set disable_vrfy_command = yes in Postfix.'
   }
 ];
@@ -230,9 +230,10 @@ function generateDemoResults(target: string) {
   const allVulnerabilities = [...selectedHigh, ...selectedLow];
   
   // Calculate risk score based on vulnerabilities
-  const criticalCount = allVulnerabilities.filter(v => v.severity === 'critical').length;
-  const highCount = allVulnerabilities.filter(v => v.severity === 'high').length;
-  const riskScore = Math.min(10, 4.5 + (criticalCount * 1.5) + (highCount * 0.8) + (Math.random() * 0.5));
+  const criticalCount = allVulnerabilities.filter(v => v.severity === 'Critical').length;
+  const highCount = allVulnerabilities.filter(v => v.severity === 'High').length;
+  const mediumCount = allVulnerabilities.filter(v => v.severity === 'Medium').length;
+  const riskScore = Math.min(10, 4.5 + (criticalCount * 1.5) + (highCount * 0.8) + (mediumCount * 0.3) + (Math.random() * 0.5));
   
   // Generate open ports from vulnerabilities
   const openPorts = [...new Set(allVulnerabilities.map(v => v.port))].sort((a, b) => a - b);
